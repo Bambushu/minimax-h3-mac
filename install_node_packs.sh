@@ -43,7 +43,13 @@ if [[ $TARGET == foxydit || $TARGET == all ]]; then
   clone https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git
   # Spectrum: Foxydit contains a SpectrumApplyMiniMaxH3 node. It ships BYPASSED in this port
   # (its author says use Spectrum OR EasyCache, never both) but the node must still resolve.
+  # PINNED to v0.1.5: Spectrum v0.1.6+ targets a LATER ComfyUI that changed H3's native
+  # sampling/audio path. On the ComfyUI 0.30.0 this pack is measured on, v0.1.5 is the
+  # matching version (it also carries an Apple MPS fix). If you move to a newer ComfyUI,
+  # update Spectrum to latest instead - and know that none of this pack's numbers were
+  # measured there.
   clone https://github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3.git
+  ( cd $CN/ComfyUI-Spectrum-MiniMax-H3 && git fetch -q --depth 1 origin tag v0.1.5 2>/dev/null && git -c advice.detachedHead=false checkout -q v0.1.5 || echo "  WARN: could not pin Spectrum v0.1.5, using cloned HEAD" )
   PACKS+=(rgthree-comfy ComfyUI-VideoHelperSuite ComfyUI-Easy-Use ComfyUI-KJNodes
           ComfyUI-Frame-Interpolation ComfyUI-Spectrum-MiniMax-H3)
 fi

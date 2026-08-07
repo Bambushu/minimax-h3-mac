@@ -95,6 +95,11 @@ b-roll, enable one; EasyCache measured better on both axes (-43% wall at layout 
 against Spectrum's -20% at 0.956). An earlier build of this port had both active, which the
 author explicitly warns against.
 
+The Spectrum figure is for v0.1.5, the version that matches ComfyUI 0.30.0 and the one the
+installer pins. Its author has since released v0.1.8 (degree 1) claiming about -45% with no
+visible quality loss, but that targets a later ComfyUI that changed H3's sampling and audio
+path, and it is unmeasured here. If you chase it, you leave every number in this pack behind.
+
 The port also severs the link feeding VHS_VideoCombine's frame rate and pins it to 24. That
 link carried 60 for the RIFE branch, and with RIFE bypassed every render played 2.5x fast
 with chopped audio, measured on a real render. Reconnect it if you wire `RIFE VFI` in.
