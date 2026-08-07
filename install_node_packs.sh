@@ -1,0 +1,73 @@
+#!/bin/zsh
+# Custom node packs for the three MiniMax H3 Apple Silicon workflows.
+#
+#   MacMax   needs 2 packs: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8.
+#   Foxydit  needs those 2 plus 6 more.
+#
+# ResolutionSelector is ComfyUI CORE (comfy_extras/nodes_resolution.py). No Resolution-Master
+# or KJNodes pack is needed for it.
+#
+# Pass a target: ./install_node_packs.sh macmax | foxydit | all   (default: all)
+#
+# DO NOT RUN THIS WHILE A RENDER IS IN FLIGHT. It writes into the venv and the custom_nodes
+# dir, and a half-installed pack breaks ComfyUI on next start.
+set -e
+TARGET="${1:-all}"
+COMFY="${COMFY_ROOT:-$HOME/ComfyUI-h3}"
+CN=$COMFY/custom_nodes
+PY=$COMFY/venv/bin/python
+[[ -d $CN ]] || { echo "No custom_nodes at $CN. Set COMFY_ROOT to your ComfyUI checkout."; exit 1 }
+[[ -x $PY ]] || { echo "No venv python at $PY. Set COMFY_ROOT to your ComfyUI checkout."; exit 1 }
+cd $CN
+
+clone(){ [[ -d "$(basename $1 .git)" ]] && echo "have $(basename $1 .git)" || git clone --depth 1 "$1"; }
+
+PACKS=()
+
+# --- REQUIRED BY ALL THREE ------------------------------------------------------------
+# GGUF: the stock NVFP4-AWQ text encoder is CUDA-only, every workflow here loads the GGUF one.
+# AppleSilicon-FP8: the int8_convrot checkpoint will not load without it. Launch ComfyUI with
+# ASFP8_INT8_EXT=1.
+clone https://github.com/city96/ComfyUI-GGUF.git
+clone https://github.com/pawel-mazurkiewicz/ComfyUI-AppleSilicon-FP8.git
+PACKS+=(ComfyUI-GGUF ComfyUI-AppleSilicon-FP8)
+# ComfyUI-GGUF reports IMPORT FAILED without this exact version
+$PY -m pip install -q "gguf==0.18.0" || echo "  WARN: gguf==0.18.0 failed to install"
+
+if [[ $TARGET == foxydit || $TARGET == all ]]; then
+  # --- FOXYDIT (filmmaking rig) -------------------------------------------------------
+  clone https://github.com/rgthree/rgthree-comfy.git
+  clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git
+  clone https://github.com/yolain/ComfyUI-Easy-Use.git
+  clone https://github.com/kijai/ComfyUI-KJNodes.git
+  clone https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git
+  # Spectrum: Foxydit contains a SpectrumApplyMiniMaxH3 node. It ships BYPASSED in this port
+  # (its author says use Spectrum OR EasyCache, never both) but the node must still resolve.
+  clone https://github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3.git
+  PACKS+=(rgthree-comfy ComfyUI-VideoHelperSuite ComfyUI-Easy-Use ComfyUI-KJNodes
+          ComfyUI-Frame-Interpolation ComfyUI-Spectrum-MiniMax-H3)
+fi
+
+
+# requirements, minus the NVIDIA-only lines: triton, sageattention, flash-attn and xformers
+# have no Apple Silicon builds.
+for d in ${(u)PACKS}; do
+  if [[ -f $CN/$d/requirements.txt ]]; then
+    grep -viE '^(nvidia|triton|sageattention|flash-attn|xformers)' $CN/$d/requirements.txt \
+      > "${TMPDIR:-/tmp}/req_$d.txt" || true
+    echo "installing $d requirements (NVIDIA/triton lines stripped)"
+    $PY -m pip install -q -r "${TMPDIR:-/tmp}/req_$d.txt" || echo "  WARN: some requirements failed for $d"
+  fi
+done
+
+cat <<'EOF'
+
+Done. Restart ComfyUI with:
+  ASFP8_INT8_EXT=1 python main.py --port 8288 --reserve-vram 10 --cache-none --disable-smart-memory
+
+Then load a workflow. On first load the model loaders may show red: these files use bare
+stock filenames, so if your models live in subfolders you re-pick them once. That is expected.
+
+These node types stay unresolved on Apple Silicon and ship BYPASSED on purpose. Do not enable
+them: SolAttnPatch, MiniMaxH3MemoryEfficientSageAttentionPatch, RIFEInterpolation, LoadAudioUI.
+EOF
