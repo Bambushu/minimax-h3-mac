@@ -1,14 +1,13 @@
 #!/bin/zsh
 # Custom node packs for the three MiniMax H3 Apple Silicon workflows.
 #
-#   MacMax   needs 2 packs: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8.
-#   Foxydit  needs those 2 plus 6 more.
-#   DaSiWa   needs those 2 plus 3 more.
+#   MacMax   needs 3 packs: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8, ComfyUI-Spectrum-MiniMax-H3.
+#   Foxydit  needs those 3 plus 5 more.
 #
 # ResolutionSelector is ComfyUI CORE (comfy_extras/nodes_resolution.py). No Resolution-Master
 # or KJNodes pack is needed for it.
 #
-# Pass a target: ./install_node_packs.sh macmax | foxydit | dasiwa | all   (default: all)
+# Pass a target: ./install_node_packs.sh macmax | foxydit | all   (default: all)
 #
 # DO NOT RUN THIS WHILE A RENDER IS IN FLIGHT. It writes into the venv and the custom_nodes
 # dir, and a half-installed pack breaks ComfyUI on next start.
@@ -60,16 +59,8 @@ if [[ $TARGET == foxydit || $TARGET == all ]]; then
           ComfyUI-Frame-Interpolation)
 fi
 
-if [[ $TARGET == dasiwa || $TARGET == all ]]; then
-  # --- DASIWA (director) --------------------------------------------------------------
-  clone https://github.com/darksidewalker/ComfyUI-DaSiWa-Nodes.git
-  clone https://github.com/rgthree/rgthree-comfy.git
-  clone https://github.com/kijai/ComfyUI-KJNodes.git
-  PACKS+=(ComfyUI-DaSiWa-Nodes rgthree-comfy ComfyUI-KJNodes)
-fi
 
-# requirements, minus the NVIDIA-only lines. nvidia-vfx is imported by NOTHING in the DaSiWa
-# pack (only its RTX upscaler node needs it) and will fail to install on Mac. Same for triton,
+# requirements, minus the NVIDIA-only lines. Those fail to install on Mac. Same for triton,
 # sageattention, flash-attn and xformers, none of which have Apple Silicon builds.
 for d in ${(u)PACKS}; do
   if [[ -f $CN/$d/requirements.txt ]]; then

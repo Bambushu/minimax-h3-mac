@@ -34,9 +34,11 @@ permission notice are reproduced in full in `LICENSE-MIT.txt`, as that licence r
   2. `PathchSageAttentionKJ` set to BYPASS, SageAttention is CUDA-only
   3. `CLIPLoader` → `CLIPLoaderGGUF` (Q4_K_M, type `minimax`), the NVFP4-AWQ encoder is CUDA-only
   4. `EasyCache` threshold retuned 0.3 to 0.2, left BYPASSED as shipped. A seed-controlled
-     A/B on MPS showed step caching visibly breaks up faces, so it stays a b-roll-only toggle
-  5. `SpectrumApplyMiniMaxH3` set to BYPASS. The original's own note says to use Spectrum or
-     EasyCache and never both; with faces both stay off, for b-roll enable one
+     A/B on MPS showed it smears mouths and teeth, so it stays a b-roll-only toggle
+  5. `SpectrumApplyMiniMaxH3` ENABLED (the original ships it bypassed), and its parameters
+     changed from degree 4 / warmup 5 to degree 1 / warmup 1. Re-measured on MPS it holds
+     faces where EasyCache does not, at -27% wall. The original's own rule is kept: use
+     Spectrum or EasyCache and never both, so EasyCache remains bypassed
   5b. `VHS_VideoCombine`'s frame_rate link severed and the widget pinned to 24. The link fed
      60 (the RIFE out-rate); with RIFE bypassed, renders played 2.5x fast
   6. `RIFEInterpolation` set to BYPASS. That node type is not registered by any version
@@ -51,28 +53,6 @@ permission notice are reproduced in full in `LICENSE-MIT.txt`, as that licence r
 
   `LoadAudioUI` was already bypassed upstream and is not registered on Mac. It was left
   exactly as found and is not counted as a modification.
-
-## `h3_mac_DASIWA_director.json`, MODIFIED from DaSiWa / darksidewalker
-
-- Original author: DaSiWa (darksidewalker)
-- Source: https://github.com/darksidewalker/ComfyUI-DaSiWa-Nodes ,
-  `workflows/DaSiWa MiniMaxH3 MythicAlchemy C-MMH3-12.json`, retrieved 2026-08-07
-- Licence: GNU GPL v3.0 (see `LICENSE-DaSiWa-GPL3.txt`, copied verbatim from that repo).
-  This modified file is therefore distributed under GPL-3.0, and the modifications are
-  stated below as that licence requires, with the same notice repeated inside the workflow
-  file itself. Only that file is GPL; see the licensing note at the end for everything else.
-- Modifications made on 2026-08-07:
-  1. `PathchSageAttentionKJ` ×2 set to BYPASS, SageAttention is CUDA-only
-  2. `MiniMaxH3MemoryEfficientSageAttentionPatch` ×2 set to BYPASS, same reason
-  3. `DaSiWa_RTX_UpscalerRefiner` set to BYPASS, NVIDIA RTX only
-  4. `CLIPLoader` → `CLIPLoaderGGUF` (Q4_K_M, type `minimax`)
-  5. A stale CUDA note banner-prefixed as not applying on Mac
-  6. One "APPLE SILICON PORT - READ ME" note added
-
-Their node pack itself is not redistributed here, `install_node_packs.sh` clones it
-from the author's own repository.
-
----
 
 ## Upstream versions are pinned above on purpose
 
@@ -93,7 +73,6 @@ have no Apple Silicon equivalent.
 by MAD IT under the MIT licence. Full text in `LICENSE-MIT.txt`. Use, modify and redistribute
 them freely, with attribution.
 
-`h3_mac_DASIWA_director.json` is GPL-3.0, inherited from its original. `h3_mac_FOXYDIT_
-filmmaking.json` is governed by foxfuressence's terms on CivitAI and redistributed here by
-his permission with attribution. Those two files are aggregated alongside the MIT-licensed
-files, not derived from them.
+`h3_mac_FOXYDIT_filmmaking.json` is governed by foxfuressence's terms on CivitAI and
+redistributed here by his permission with attribution. That file is aggregated alongside the
+MIT-licensed files, not derived from them.
