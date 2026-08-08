@@ -2,11 +2,12 @@
 
 | file | nodes | extra packs | use it for |
 |---|---|---|---|
-| `MacMax_MiniMaxH3_AppleSilicon.json` | 26 + 3 notes | 2 | default. T2V, I2V and FLF in one graph |
+| `MacMax_MiniMaxH3_AppleSilicon.json` | 27 + 3 notes | 3 | default. T2V, I2V and FLF in one graph |
 | `h3_mac_FOXYDIT_filmmaking.json` | 56 | 8 packs, plus a 2nd 21 GB DiT | full rig: 4 reference pictures, video, audio, REF2VA |
 
 `./install_node_packs.sh [macmax|foxydit|all]` installs the packs. Run it with nothing
-rendering. MacMax needs exactly two: ComfyUI-GGUF and ComfyUI-AppleSilicon-FP8. Both are
+rendering. MacMax needs three: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8 and
+ComfyUI-Spectrum-MiniMax-H3 (pinned v0.1.5, its node ships enabled). All three are
 installed for every target because both workflows need them. `ResolutionSelector` is
 ComfyUI core, not a custom node.
 
@@ -23,7 +24,7 @@ Laid out in reading order, grouped by what you touch:
 2 - PROMPT          the prompt and frame-count maths
 3 - MODE            two collapsed LoadImage nodes
 MODELS (set once)   DiT, text encoder, both VAEs
-SPEED (leave alone) EasyCache, sigma shift
+SPEED               Spectrum (on), EasyCache (off), sigma shift
 SAMPLING            internals
 OUTPUT              decode, mux, save
 EXTRAS              audio preview, 1080p export, audio stem
@@ -36,13 +37,13 @@ first for I2V, enable both for FLF. `MiniMaxH3ImageToVideo` already takes option
 MacMax does not do R2V. Carrying identity from reference stills uses a different
 conditioning node (`MiniMaxH3ReferenceToVideo`); the Foxydit port covers that.
 
-Defaults are 0.6 MP at 5s, 20 steps, EasyCache present but OFF (see the face warning under
-Numbers that matter). It also exposes `MiniMaxH3SigmaShift` (12/3), which the shipped ComfyUI
+Defaults are 0.6 MP at 5s, 20 steps, Spectrum ON at degree 1 / warmup 1, and EasyCache
+present but OFF (see the face warning under Numbers that matter). It also exposes `MiniMaxH3SigmaShift` (12/3), which the shipped ComfyUI
 template omits.
 
 ### Extras
 
-All ComfyUI core, so the two-pack requirement still holds.
+All ComfyUI core, so they add nothing to the three-pack requirement.
 
 - `PreviewAudio`, active. H3's headline feature is the audio and there was no way to hear it
   without leaving ComfyUI to open the file. Free to run.
@@ -57,15 +58,15 @@ Seven nodes ship bypassed: the two mode nodes, EasyCache, and the four export no
 Everything else is
 active. Enabling any of them is one click.
 
-Verified in ComfyUI: 26 functional nodes and 3 notes, no missing node types, no console
+Verified in ComfyUI: 27 functional nodes and 3 notes, no missing node types, no console
 errors, no overlapping nodes, every functional node inside a group (the three notes sit
 above the graph as a header row, deliberately outside).
 
 MacMax has been rendered end to end from this exact file. See the table below.
 
-API node counts once the model paths are repointed: 19 as shipped (cache off), 20 with the
-first `LoadImage` enabled, 21 with both, 23 with the four export extras also enabled, plus
-one more in each state if you enable EasyCache. The three
+API node counts once the model paths are repointed: 20 as shipped (Spectrum on, EasyCache
+off), 21 with the first `LoadImage` enabled, 22 with both, 24 with the four export extras
+also enabled, plus one more in each state if you enable EasyCache. The three
 modes were checked by serialising the prompt: both bypassed gives no `first_frame` or
 `last_frame`, enabling the first adds `first_frame`, enabling both adds `last_frame`.
 
@@ -89,11 +90,13 @@ Bypassed for Mac, left visible rather than deleted:
 
 `CLIPLoader` swapped to `CLIPLoaderGGUF`.
 
-The original's own note says to use Spectrum or EasyCache, never both. This port ships both
-bypassed: a seed-controlled A/B showed step caching visibly degrades faces on MPS. For
-b-roll, enable one; EasyCache measured better on both axes (-43% wall at layout 0.991,
-against Spectrum's -20% at 0.956). An earlier build of this port had both active, which the
-author explicitly warns against.
+The original's own note says to use Spectrum or EasyCache, never both. This port keeps that
+rule and enables Spectrum, at degree 1 / warmup 1 rather than the upstream degree 4 /
+warmup 5. Re-measured on face crops at full size, Spectrum holds mouths and teeth where
+EasyCache smears them, at -27% wall against uncached. EasyCache stays bypassed and is worth
+a keypress only for faceless b-roll. An earlier build of this port had both active, which
+the author explicitly warns against, and an earlier version of these docs recommended
+EasyCache on a 0.991 layout correlation computed on thumbnails that cannot resolve a mouth.
 
 The Spectrum figure is for v0.1.5, the version that matches ComfyUI 0.30.0 and the one the
 installer pins. Its author has since released v0.1.8 (degree 1) claiming about -45% with no

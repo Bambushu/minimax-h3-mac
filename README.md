@@ -31,9 +31,12 @@ know). Custom nodes:
 
 - ComfyUI-AppleSilicon-FP8, required, the int8 path will not load without it
 - ComfyUI-GGUF, plus `pip install gguf==0.18.0` or it reports IMPORT FAILED
+- ComfyUI-Spectrum-MiniMax-H3, pinned to v0.1.5. MacMax ships with Spectrum enabled, so
+  without this pack the node will not resolve and the graph will not run. Delete the node
+  and reconnect sigma shift to the sampler if you would rather not add it
 
-That is all. `ResolutionSelector` is ComfyUI core (`comfy_extras/nodes_resolution.py`).
-`./install_node_packs.sh macmax` clones both and pins gguf. The Foxydit port needs more; run it
+`ResolutionSelector` is ComfyUI core (`comfy_extras/nodes_resolution.py`).
+`./install_node_packs.sh macmax` clones all three and pins gguf. The Foxydit port needs more; run it
 with `foxydit` or `all`.
 
 ```bash
