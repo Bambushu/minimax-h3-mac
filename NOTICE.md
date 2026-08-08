@@ -73,7 +73,6 @@ have no Apple Silicon equivalent.
 by MAD IT under the MIT licence. Full text in `LICENSE-MIT.txt`. Use, modify and redistribute
 them freely, with attribution.
 
-`h3_mac_DASIWA_director.json` is GPL-3.0, inherited from its original. `h3_mac_FOXYDIT_
-filmmaking.json` is governed by foxfuressence's terms on CivitAI and redistributed here by
-his permission with attribution. Those two files are aggregated alongside the MIT-licensed
-files, not derived from them.
+`h3_mac_FOXYDIT_filmmaking.json` is governed by foxfuressence's terms on CivitAI and
+redistributed here by his permission with attribution. That file is aggregated alongside the
+MIT-licensed files, not derived from them.

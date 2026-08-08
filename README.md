@@ -34,7 +34,7 @@ know). Custom nodes:
 
 That is all. `ResolutionSelector` is ComfyUI core (`comfy_extras/nodes_resolution.py`).
 `./install_node_packs.sh macmax` clones both and pins gguf. The two ports need more; run it
-with `foxydit`, `dasiwa` or `all`.
+with `foxydit` or `all`.
 
 ```bash
 ASFP8_INT8_EXT=1 python main.py --port 8288 \

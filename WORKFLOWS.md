@@ -5,7 +5,7 @@
 | `MacMax_MiniMaxH3_AppleSilicon.json` | 26 + 3 notes | 2 | default. T2V, I2V and FLF in one graph |
 | `h3_mac_FOXYDIT_filmmaking.json` | 56 | 8 packs, plus a 2nd 21 GB DiT | full rig: 4 reference pictures, video, audio, REF2VA |
 
-`./install_node_packs.sh [macmax|foxydit|dasiwa|all]` installs the packs. Run it with nothing
+`./install_node_packs.sh [macmax|foxydit|all]` installs the packs. Run it with nothing
 rendering. MacMax needs exactly two: ComfyUI-GGUF and ComfyUI-AppleSilicon-FP8. Both are
 installed for every target because all three workflows need them. `ResolutionSelector` is
 ComfyUI core, not a custom node.
