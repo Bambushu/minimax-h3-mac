@@ -33,7 +33,7 @@ know). Custom nodes:
 - ComfyUI-GGUF, plus `pip install gguf==0.18.0` or it reports IMPORT FAILED
 
 That is all. `ResolutionSelector` is ComfyUI core (`comfy_extras/nodes_resolution.py`).
-`./install_node_packs.sh macmax` clones both and pins gguf. The two ports need more; run it
+`./install_node_packs.sh macmax` clones both and pins gguf. The Foxydit port needs more; run it
 with `foxydit` or `all`.
 
 ```bash

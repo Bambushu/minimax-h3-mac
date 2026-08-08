@@ -7,7 +7,7 @@
 
 `./install_node_packs.sh [macmax|foxydit|all]` installs the packs. Run it with nothing
 rendering. MacMax needs exactly two: ComfyUI-GGUF and ComfyUI-AppleSilicon-FP8. Both are
-installed for every target because all three workflows need them. `ResolutionSelector` is
+installed for every target because both workflows need them. `ResolutionSelector` is
 ComfyUI core, not a custom node.
 
 For scripted runs use `render_h3.py`. `--dump-graph out.json` emits the API graph. It works
@@ -71,7 +71,7 @@ modes were checked by serialising the prompt: both bypassed gives no `first_fram
 
 On first load the four model loaders may show red. The workflow uses bare stock filenames.
 If your models sit in subfolders, re-pick them once. That is the only expected error in
-MacMax. The two ports additionally show their bypassed unregistered nodes in red (six types,
+MacMax. The Foxydit port additionally shows its bypassed unregistered nodes in red (six types,
 listed under What was actually verified); that is normal, not a broken install.
 
 ## Foxydit port

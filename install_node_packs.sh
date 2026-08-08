@@ -24,7 +24,7 @@ clone(){ [[ -d "$(basename $1 .git)" ]] && echo "have $(basename $1 .git)" || gi
 
 PACKS=()
 
-# --- REQUIRED BY ALL THREE ------------------------------------------------------------
+# --- REQUIRED BY BOTH ------------------------------------------------------------
 # GGUF: the stock NVFP4-AWQ text encoder is CUDA-only, every workflow here loads the GGUF one.
 # AppleSilicon-FP8: the int8_convrot checkpoint will not load without it. Launch ComfyUI with
 # ASFP8_INT8_EXT=1.
