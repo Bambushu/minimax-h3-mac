@@ -3,11 +3,12 @@
 #
 #   MacMax   needs 2 packs: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8.
 #   Foxydit  needs those 2 plus 6 more.
+#   DaSiWa   needs those 2 plus 3 more.
 #
 # ResolutionSelector is ComfyUI CORE (comfy_extras/nodes_resolution.py). No Resolution-Master
 # or KJNodes pack is needed for it.
 #
-# Pass a target: ./install_node_packs.sh macmax | foxydit | all   (default: all)
+# Pass a target: ./install_node_packs.sh macmax | foxydit | dasiwa | all   (default: all)
 #
 # DO NOT RUN THIS WHILE A RENDER IS IN FLIGHT. It writes into the venv and the custom_nodes
 # dir, and a half-installed pack breaks ComfyUI on next start.
@@ -34,6 +35,19 @@ PACKS+=(ComfyUI-GGUF ComfyUI-AppleSilicon-FP8)
 # ComfyUI-GGUF reports IMPORT FAILED without this exact version
 $PY -m pip install -q "gguf==0.18.0" || echo "  WARN: gguf==0.18.0 failed to install"
 
+# Spectrum: BOTH workflows now ship it ENABLED. It forecasts skipped sampling steps from a
+# fitted curve instead of reusing a cached state, so fast-changing detail like a mouth
+# survives. Measured on MPS at 0.6 MP/5s/20 steps, same seed: 34:27 vs 47:21 uncached (-27%),
+# 8 of 20 steps forecast, faces intact. EasyCache is faster (31:16) but visibly smears mouths
+# and teeth, so it ships BYPASSED in both. Never enable both at once.
+# PINNED to v0.1.5: Spectrum v0.1.6+ targets a LATER ComfyUI that changed H3's native
+# sampling/audio path. On the ComfyUI 0.30.0 this pack is measured on, v0.1.5 is the matching
+# version (it also carries an Apple MPS fix). If you move to a newer ComfyUI, update Spectrum
+# to latest instead - and know that none of this pack's numbers were measured there.
+clone https://github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3.git
+( cd $CN/ComfyUI-Spectrum-MiniMax-H3 && git fetch -q --depth 1 origin tag v0.1.5 2>/dev/null && git -c advice.detachedHead=false checkout -q v0.1.5 || echo "  WARN: could not pin Spectrum v0.1.5, using cloned HEAD" )
+PACKS+=(ComfyUI-Spectrum-MiniMax-H3)
+
 if [[ $TARGET == foxydit || $TARGET == all ]]; then
   # --- FOXYDIT (filmmaking rig) -------------------------------------------------------
   clone https://github.com/rgthree/rgthree-comfy.git
@@ -41,22 +55,22 @@ if [[ $TARGET == foxydit || $TARGET == all ]]; then
   clone https://github.com/yolain/ComfyUI-Easy-Use.git
   clone https://github.com/kijai/ComfyUI-KJNodes.git
   clone https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git
-  # Spectrum: Foxydit contains a SpectrumApplyMiniMaxH3 node. It ships BYPASSED in this port
-  # (its author says use Spectrum OR EasyCache, never both) but the node must still resolve.
-  # PINNED to v0.1.5: Spectrum v0.1.6+ targets a LATER ComfyUI that changed H3's native
-  # sampling/audio path. On the ComfyUI 0.30.0 this pack is measured on, v0.1.5 is the
-  # matching version (it also carries an Apple MPS fix). If you move to a newer ComfyUI,
-  # update Spectrum to latest instead - and know that none of this pack's numbers were
-  # measured there.
-  clone https://github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3.git
-  ( cd $CN/ComfyUI-Spectrum-MiniMax-H3 && git fetch -q --depth 1 origin tag v0.1.5 2>/dev/null && git -c advice.detachedHead=false checkout -q v0.1.5 || echo "  WARN: could not pin Spectrum v0.1.5, using cloned HEAD" )
+  # Spectrum is installed above, for every target.
   PACKS+=(rgthree-comfy ComfyUI-VideoHelperSuite ComfyUI-Easy-Use ComfyUI-KJNodes
-          ComfyUI-Frame-Interpolation ComfyUI-Spectrum-MiniMax-H3)
+          ComfyUI-Frame-Interpolation)
 fi
 
+if [[ $TARGET == dasiwa || $TARGET == all ]]; then
+  # --- DASIWA (director) --------------------------------------------------------------
+  clone https://github.com/darksidewalker/ComfyUI-DaSiWa-Nodes.git
+  clone https://github.com/rgthree/rgthree-comfy.git
+  clone https://github.com/kijai/ComfyUI-KJNodes.git
+  PACKS+=(ComfyUI-DaSiWa-Nodes rgthree-comfy ComfyUI-KJNodes)
+fi
 
-# requirements, minus the NVIDIA-only lines: triton, sageattention, flash-attn and xformers
-# have no Apple Silicon builds.
+# requirements, minus the NVIDIA-only lines. nvidia-vfx is imported by NOTHING in the DaSiWa
+# pack (only its RTX upscaler node needs it) and will fail to install on Mac. Same for triton,
+# sageattention, flash-attn and xformers, none of which have Apple Silicon builds.
 for d in ${(u)PACKS}; do
   if [[ -f $CN/$d/requirements.txt ]]; then
     grep -viE '^(nvidia|triton|sageattention|flash-attn|xformers)' $CN/$d/requirements.txt \

@@ -7,7 +7,7 @@ Measured on a 48 GB M5 Pro, ComfyUI 0.30.0, torch 2.13, over roughly 40 renders 
 2026-08-04 to 08-07. One machine, mostly one prompt. Treat the numbers as a strong prior,
 not a law.
 
-Two workflows ship here. See `WORKFLOWS.md` for which to use and what each one contains.
+Three workflows ship here. See `WORKFLOWS.md` for which to use and what each one contains.
 
 ## Models
 
@@ -33,8 +33,8 @@ know). Custom nodes:
 - ComfyUI-GGUF, plus `pip install gguf==0.18.0` or it reports IMPORT FAILED
 
 That is all. `ResolutionSelector` is ComfyUI core (`comfy_extras/nodes_resolution.py`).
-`./install_node_packs.sh macmax` clones both and pins gguf. The Foxydit port needs more;
-run it with `foxydit` or `all`.
+`./install_node_packs.sh macmax` clones both and pins gguf. The two ports need more; run it
+with `foxydit`, `dasiwa` or `all`.
 
 ```bash
 ASFP8_INT8_EXT=1 python main.py --port 8288 \
@@ -99,16 +99,33 @@ untested, not refuted.
 
 | lever | result |
 |---|---|
-| EasyCache 0.2 | biggest lever: -43% at 1.03 MP/3s (layout 0.991), -42% at the 0.6 MP/5s default, about -13% at 0.4 MP. Faces at 0.6 MP: OFF, a seed-controlled A/B showed visible mouth breakup. Faces at ~1 MP: usable, the same test came back clean. Ships bypassed | 
-| Spectrum | -20%, layout 0.956. Approximate by design, fine for previz |
+| **Spectrum, degree 1** | **ships ON in both workflows.** -27% (34:27 vs 47:21 uncached) at the 0.6 MP/5s default, 8 of 20 steps forecast. Faces hold: teeth and lips stay defined, no artefacts |
+| EasyCache 0.2 | faster still (31:16, -34%) but it **smears mouths and teeth**. Ships bypassed. Fine for faceless b-roll, where the artefacts have nothing to damage. Never run it alongside Spectrum |
 | ASFP8 int8 kernel | no measurable gain on H3 shapes |
 | mtlflashattn | no gain at 15k tokens |
 | SageAttention, Sol-Attn | CUDA only, no Apple Silicon build |
 
-Cutting steps is the worse lever: 15 steps costs 0.940 for -25%, EasyCache costs 0.009 for
--43%. With the cache on, 15 and 20 steps land close together because they evaluate a similar
-number of real steps: 20 steps skips 9 and evaluates 11, 15 steps skips 5 and evaluates 10.
-Use 20 steps; add EasyCache only when nothing identity-led is in frame.
+Both accelerators skip sampling steps, but not the same way. EasyCache **reuses** a cached
+state; Spectrum **forecasts** the skipped step from a fitted curve. That difference is why
+fast-changing detail like a mouth survives one and not the other.
+
+Measured on face crops resized to a common size, same seed and prompt, so resolution cannot
+win for free:
+
+| | wall | fine detail | faces |
+|---|---|---|---|
+| uncached | 47:21 | 0.381 | reference |
+| EasyCache 0.2 | 31:16 | **0.405** | mouths and teeth visibly smeared |
+| Spectrum d1 | 34:27 | 0.368 | teeth and lips hold |
+
+Note that EasyCache scores the **highest** on fine detail while looking the **worst**. It is
+not resolving detail, it is injecting spurious high-frequency edge noise, so any sharpness
+metric rewards it. Earlier versions of this pack recommended EasyCache on exactly that kind
+of evidence: a 0.991 layout correlation computed on 32x32 thumbnails that cannot resolve a
+mouth. If you benchmark a cache, look at a face at full size before you trust a number.
+
+Cutting steps remains the worse lever: 15 steps costs 0.940 layout correlation for -25%.
+Use 20 steps with Spectrum on.
 
 ## Previz
 

@@ -4,8 +4,9 @@
 |---|---|---|---|
 | `MacMax_MiniMaxH3_AppleSilicon.json` | 26 + 3 notes | 2 | default. T2V, I2V and FLF in one graph |
 | `h3_mac_FOXYDIT_filmmaking.json` | 56 | 8 packs, plus a 2nd 21 GB DiT | full rig: 4 reference pictures, video, audio, REF2VA |
+| `h3_mac_DASIWA_director.json` | 18 + subgraph | 5 packs | timeline authoring with the H3 Director |
 
-`./install_node_packs.sh [macmax|foxydit|all]` installs the packs. Run it with nothing
+`./install_node_packs.sh [macmax|foxydit|dasiwa|all]` installs the packs. Run it with nothing
 rendering. MacMax needs exactly two: ComfyUI-GGUF and ComfyUI-AppleSilicon-FP8. Both are
 installed for every target because all three workflows need them. `ResolutionSelector` is
 ComfyUI core, not a custom node.
@@ -119,6 +120,26 @@ ensemble on, took 8 frames of a 608x1056 clip to 15 in 12 seconds on MPS, includ
 first-run checkpoint download. To use it, delete the bypassed node and wire `RIFE VFI` in
 its place. `multiplier` 2 doubles the frame rate.
 
+## DaSiWa port
+
+Original by DaSiWa (darksidewalker),
+[ComfyUI-DaSiWa-Nodes](https://github.com/darksidewalker/ComfyUI-DaSiWa-Nodes), workflow
+"MythicAlchemy C-MMH3-12". GPL-3.0, see `NOTICE.md` and `LICENSE-DaSiWa-GPL3.txt`.
+
+The Director authors a timeline and emits a `guide` dict; `MiniMaxH3DirectorGuide` turns
+that into conditioning and latent and hands off to ComfyUI's native H3 nodes, which is why
+it ports cleanly.
+
+Bypassed for Mac: `PathchSageAttentionKJ` x2,
+`MiniMaxH3MemoryEfficientSageAttentionPatch` x2, `DaSiWa_RTX_UpscalerRefiner`.
+`CLIPLoader` swapped to `CLIPLoaderGGUF`.
+
+`pip install -r requirements.txt` fails on Mac because it lists `nvidia-vfx`. Nothing in the
+pack imports it, only the RTX node needs it. `install_node_packs.sh` strips that line.
+
+Their `DaSiWa_ResolutionScaleCalculator` defaults to "0.65 MP - Balanced", which lands on
+the same token budget measured here.
+
 ## What was actually verified
 
 Clean install of the node packs, 2026-08-07, ComfyUI 0.30.0. What follows is what the logs
@@ -128,21 +149,40 @@ prove, not more:
 |---|---|---|---|
 | MacMax | yes | yes, after repointing 4 model paths | yes |
 | Foxydit | yes, 56 nodes | yes, after repointing | yes |
+| DaSiWa | yes, 62 nodes (18 top-level + the subgraph's contents) | not yet | no |
 
-MacMax was rendered end to end from this exact file (md5
-`f59d355f58922e84b7593f5302beba94`), loaded in the ComfyUI frontend and queued through its
-own `graphToPrompt()`. The only edits before pressing run were the four documented model-path
-repoints. Result: 608x1056, 24 fps, 5.167 s, h264 plus AAC stereo, total 48:54 at the
-shipped cache-off defaults. An earlier build was also rendered with EasyCache enabled
-(total 31:16, cache skipped 9 of 20 steps), which is where the speed figures come from.
+MacMax was rendered end to end from md5 `f59d355f58922e84b7593f5302beba94`, loaded in the
+ComfyUI frontend and queued through its own `graphToPrompt()`. The only edits before pressing
+run were the four documented model-path repoints. Result: 608x1056, 24 fps, 5.167 s, h264
+plus AAC stereo, total 48:54 uncached. An earlier build was also rendered with EasyCache
+enabled (total 31:16, cache skipped 9 of 20 steps).
+
+**The shipped file has since changed** (Spectrum now enabled by default), so its md5 no
+longer matches that render. The Spectrum figures quoted here - 34:27, 8 of 20 steps forecast,
+faces intact - were measured at the same canvas, seed, steps and Spectrum dials (degree 1,
+warmup 1) through the scripted driver rather than the GUI. A fresh end-to-end frontend render
+of the current file is pending; until it lands, treat the provenance above as covering the
+graph structure and the uncached and EasyCache numbers, not the Spectrum row.
 
 Foxydit was rendered end to end twice on the REF2VA path with one reference image: once at
 the original's 0.5 MP defaults (which also exposed the 60 fps playback bug this port now
 fixes) and once at 768x1376, 24 fps, 3.04 s with stereo audio, uncached. It needs reference
 images, which do not ship; point the Picture 1 loader at your own.
 
-MacMax uses bare filenames, Foxydit uses its author's. Both need the same one-time re-pick
-if your layout differs.
+DaSiWa has never been rendered. On the one logged attempt its prompt was REJECTED at
+validation, not accepted:
+
+```
+Failed to validate prompt for output 2568:
+* VAELoader: Value not in list: 'MiniMaxH3/minimax_h3_audio_vae_fp32.safetensors' not in [...]
+```
+
+That is the model-path problem, not a porting problem, and it is fixed by re-picking the
+files. But it has not been redone and logged since, so treat DaSiWa as loading correctly and
+otherwise unproven.
+
+DaSiWa ships model paths under a `MiniMaxH3/` subfolder, MacMax uses bare filenames, Foxydit
+uses its author's. All three need the same one-time re-pick if your layout differs.
 
 Six node types stay unresolved on a Mac install: `SolAttnPatch`,
 `MiniMaxH3MemoryEfficientSageAttentionPatch`, `RIFEInterpolation`, `LoadAudioUI`, and
@@ -150,8 +190,7 @@ rgthree's `Fast Groups Bypasser` and `Label`. They ship bypassed, so ComfyUI dro
 building the API prompt and the graph still validates, but they show red in the editor. Do
 not un-bypass them.
 
-(Historical note for anyone porting DaSiWa's Director workflow themselves: its embedded
-subgraph carries two stale link records that route through a node `1814`
+DaSiWa's embedded subgraph carries two stale link records that route through a node `1814`
 which does not exist. This is not something this port introduced: the upstream original has
 the same two, byte for byte, and ComfyUI loads it anyway. Flagged here so nobody spends an
 afternoon on it.
@@ -189,7 +228,7 @@ EasyCache is a b-roll tool at low resolution. A seed-controlled A/B at the MacMa
 (same seed, prompt and canvas, cache the only variable) showed visible pixel breakup around
 the mouth and face with the cache on and a clean result with it off. The structural layout
 metric scores them 0.991-similar because it is computed on thumbnails that cannot resolve a
-mouth. Both workflows therefore ship their caches bypassed.
+mouth. The workflows therefore ship their caches bypassed.
 
 Canvas changes the verdict: the same test at 1.03 MP / 3s with the cache on came back clean,
 in stills and in motion. More face pixels means the cached-step error hurts proportionally

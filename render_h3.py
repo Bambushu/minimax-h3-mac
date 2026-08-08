@@ -210,7 +210,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", type=int, default=25)
     ap.add_argument("--seconds", type=float, default=5.0)
-    ap.add_argument("--aspect", default="16:9 (Widescreen)")
+    ap.add_argument("--aspect", default="9:16 (Portrait Widescreen)")  # matches prompt_vertical.txt
     ap.add_argument("--megapixels", type=float, default=0.4)
     ap.add_argument("--tag", default="run")
     ap.add_argument("--prompt", default=None)

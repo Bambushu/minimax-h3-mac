@@ -1,8 +1,8 @@
 # Attribution and licensing
 
-This pack contains one original workflow and one modified redistribution of another
-person's work, included with credit and removed on request, open an issue or contact
-MAD IT.
+This pack contains one original workflow and two modified redistributions of other
+people's work. Both are included with credit; both will be removed on request by their
+authors, open an issue or contact MAD IT.
 
 ---
 
@@ -23,7 +23,7 @@ permission notice are reproduced in full in `LICENSE-MIT.txt`, as that licence r
   2026-08-07
 - Licence / permission: **redistribution of this modified copy was approved by
   foxfuressence, on condition of attribution** (granted 2026-08-07; the exchange is
-  archived by MAD IT). Attribution is given here, in `WORKFLOWS.md`, and
+  recorded in `PERMISSION-foxydits.md`). Attribution is given here, in `WORKFLOWS.md`, and
   in an "APPLE SILICON PORT - READ ME" note inside the graph itself. Removed on request at
   any time.
 - Modifications made on 2026-08-07. No original node was deleted. Ten existing nodes were
@@ -52,17 +52,38 @@ permission notice are reproduced in full in `LICENSE-MIT.txt`, as that licence r
   `LoadAudioUI` was already bypassed upstream and is not registered on Mac. It was left
   exactly as found and is not counted as a modification.
 
+## `h3_mac_DASIWA_director.json`, MODIFIED from DaSiWa / darksidewalker
+
+- Original author: DaSiWa (darksidewalker)
+- Source: https://github.com/darksidewalker/ComfyUI-DaSiWa-Nodes ,
+  `workflows/DaSiWa MiniMaxH3 MythicAlchemy C-MMH3-12.json`, retrieved 2026-08-07
+- Licence: GNU GPL v3.0 (see `LICENSE-DaSiWa-GPL3.txt`, copied verbatim from that repo).
+  This modified file is therefore distributed under GPL-3.0, and the modifications are
+  stated below as that licence requires, with the same notice repeated inside the workflow
+  file itself. Only that file is GPL; see the licensing note at the end for everything else.
+- Modifications made on 2026-08-07:
+  1. `PathchSageAttentionKJ` ×2 set to BYPASS, SageAttention is CUDA-only
+  2. `MiniMaxH3MemoryEfficientSageAttentionPatch` ×2 set to BYPASS, same reason
+  3. `DaSiWa_RTX_UpscalerRefiner` set to BYPASS, NVIDIA RTX only
+  4. `CLIPLoader` → `CLIPLoaderGGUF` (Q4_K_M, type `minimax`)
+  5. A stale CUDA note banner-prefixed as not applying on Mac
+  6. One "APPLE SILICON PORT - READ ME" note added
+
+Their node pack itself is not redistributed here, `install_node_packs.sh` clones it
+from the author's own repository.
+
 ---
 
 ## Upstream versions are pinned above on purpose
 
-The original will keep evolving. This port is a snapshot of the version and date
-listed; it is not a tracking fork. Check the source link for newer releases.
+Both originals will keep evolving. These ports are snapshots of the versions and dates
+listed; they are not tracking forks. Check the source links for newer releases.
 
 ## If you find these useful
 
-Support the original author, foxfuressence on CivitAI. The structure of that workflow is
-his work; all we did was disable the parts that have no Apple Silicon equivalent.
+Support the original authors, foxfuressence on CivitAI, darksidewalker on GitHub. The
+structure of both of those workflows is their work; all we did was disable the parts that
+have no Apple Silicon equivalent.
 
 
 ## Licence for everything else in this pack
@@ -72,6 +93,7 @@ his work; all we did was disable the parts that have no Apple Silicon equivalent
 by MAD IT under the MIT licence. Full text in `LICENSE-MIT.txt`. Use, modify and redistribute
 them freely, with attribution.
 
-`h3_mac_FOXYDIT_filmmaking.json` is governed by foxfuressence's terms on CivitAI and redistributed here by
+`h3_mac_DASIWA_director.json` is GPL-3.0, inherited from its original. `h3_mac_FOXYDIT_
+filmmaking.json` is governed by foxfuressence's terms on CivitAI and redistributed here by
 his permission with attribution. Those two files are aggregated alongside the MIT-licensed
 files, not derived from them.

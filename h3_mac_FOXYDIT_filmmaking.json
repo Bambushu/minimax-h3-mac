@@ -2090,7 +2090,7 @@
           "input_ue_unconnectable": {},
           "version": "7.8"
         },
-        "mac_note": "Seed-controlled A/B on MPS: cache ON breaks up mouths/faces at 0.6 MP. Enable for b-roll only (-42%). Threshold retuned 0.3 -> 0.2."
+        "mac_note": "Seed-controlled A/B on MPS: cache ON smears mouths and teeth at 0.6 MP. Spectrum ships enabled instead. The original author's rule stands: one or the other, NEVER both."
       },
       "widgets_values": [
         0.2,
@@ -2100,7 +2100,7 @@
       ],
       "color": "#332922",
       "bgcolor": "#593930",
-      "title": "[OFF: faces glitch] EasyCache - enable for b-roll"
+      "title": "[OFF: smears faces] EasyCache - Spectrum is already on, never run both"
     },
     {
       "id": 655,
@@ -2115,7 +2115,7 @@
       ],
       "flags": {},
       "order": 45,
-      "mode": 4,
+      "mode": 0,
       "inputs": [
         {
           "name": "model",
@@ -2138,16 +2138,16 @@
           "input_ue_unconnectable": {}
         },
         "Node name for S&R": "SpectrumApplyMiniMaxH3",
-        "mac_note": "The original note says do NOT combine Spectrum with EasyCache. Both ship off here: caches visibly degrade faces on MPS. For b-roll enable ONE - EasyCache measured better on both axes (-43%/0.991 vs -20%/0.956)."
+        "mac_note": "Forecasts skipped steps from a fitted curve instead of reusing a cached state, which is why fast-changing detail like a mouth survives. Measured on MPS: 8 of 20 steps forecast, 34:27 vs 47:21 uncached, teeth and lips intact. degree 1 / warmup 1 are the values actually tested here."
       },
       "widgets_values": [
         true,
         0.5,
-        4,
+        1,
         0.1,
         2,
         0.75,
-        5,
+        1,
         1,
         8,
         false,
@@ -2155,7 +2155,7 @@
       ],
       "color": "#332922",
       "bgcolor": "#593930",
-      "title": "[MAC: BYPASSED] Spectrum - if you want a cache for b-roll, prefer EasyCache"
+      "title": "Spectrum - ON. -27% wall, faces hold. Never enable EasyCache too."
     },
     {
       "id": 149,
