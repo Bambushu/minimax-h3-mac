@@ -140,8 +140,10 @@ run were the four documented model-path repoints. Result: 608x1056, 24 fps, 5.16
 plus AAC stereo, total 48:54 uncached. An earlier build was also rendered with EasyCache
 enabled (total 31:16, cache skipped 9 of 20 steps).
 
-**The current file** (md5 `5b13347b82d140ed8544091f5dd06f07`, Spectrum v0.2.3 enabled with
-its shipped dials, degree 1, warmup 1) was rendered end to end the same way: loaded in the
+**The current graph** was proof-rendered from md5 `5b13347b82d140ed8544091f5dd06f07`
+(Spectrum v0.2.3 enabled with its shipped dials, degree 1, warmup 1); the shipped file
+(md5 `d6b4082453b2372fd40a42a3490c304f`) differs from it only in note-panel text fixed
+after that render - no executing node changed. It was rendered end to end the same way: loaded in the
 ComfyUI frontend, queued through its own `graphToPrompt()`, with the four documented
 model-path repoints as the only edits. Result: 608x1056, 24 fps, 5.167 s, h264 plus AAC
 stereo, total 31:48 including model load and the ~3.3 s replay pass, zero Spectrum
