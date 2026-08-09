@@ -138,11 +138,17 @@ def build(args):
                     "_meta": {"title": "EasyCache"}}
         src = ["140", 0]
     if args.spectrum:
+        # v0.2.3 dials, matching the shipped workflows. audio_blend_weight 0.0 and the
+        # offline replay pass are what keep H3's audio clean: audio and video share ONE
+        # transformer sequence, so a forecast error in video otherwise reaches audio
+        # through joint attention (rough sound, tripped or doubled syllables).
         g["141"] = {"class_type": "SpectrumApplyMiniMaxH3",
-                    "inputs": {"model": src, "enabled": True, "blend_weight": 1.0,
-                               "degree": 3, "ridge_lambda": 0.001, "window_size": 5,
-                               "flex_window": True, "warmup_steps": 3,
-                               "tail_actual_steps": 2, "max_history": 16, "debug": False},
+                    "inputs": {"model": src, "enabled": True, "blend_weight": 0.5,
+                               "degree": 1, "ridge_lambda": 0.1, "window_size": 2.0,
+                               "flex_window": 0.75, "warmup_steps": 1,
+                               "tail_actual_steps": 1, "max_history": 8, "debug": False,
+                               "offline_smoothing_replay": True,
+                               "audio_blend_weight": 0.0},
                     "_meta": {"title": "Spectrum"}}
         src = ["141", 0]
     if src != base_src:

@@ -31,7 +31,7 @@ know). Custom nodes:
 
 - ComfyUI-AppleSilicon-FP8, required, the int8 path will not load without it
 - ComfyUI-GGUF, plus `pip install gguf==0.18.0` or it reports IMPORT FAILED
-- ComfyUI-Spectrum-MiniMax-H3, pinned to v0.1.5. MacMax ships with Spectrum enabled, so
+- ComfyUI-Spectrum-MiniMax-H3, pinned to v0.2.3. MacMax ships with Spectrum enabled, so
   without this pack the node will not resolve and the graph will not run. Delete the node
   and reconnect sigma shift to the sampler if you would rather not add it
 
@@ -129,6 +129,38 @@ mouth. If you benchmark a cache, look at a face at full size before you trust a 
 
 Cutting steps remains the worse lever: 15 steps costs 0.940 layout correlation for -25%.
 Use 20 steps with Spectrum on.
+
+### Spectrum v0.2.3, and one Apple Silicon finding
+
+This pack now pins **v0.2.3**, not v0.1.5. If you took an earlier copy, update: MacMax ships
+Spectrum enabled, and v0.1.5 degrades H3's audio.
+
+Why that happens is specific to H3. It does not generate audio and video as separate streams -
+they are packed into one transformer sequence and interact through joint attention on different
+shifted timestep schedules. v0.1.5 applied a single shared blend weight to both, so a forecast
+error in video reached audio and came back as rough or distorted sound, tripped words and
+doubled syllables. Zeroing the audio blend alone does not fix it, because the next *actual*
+transformer call still sees the modified video state alongside the audio. v0.2.1+ separates the
+controls and adds a transformer-free replay pass that rebuilds skipped steps from anchors on
+both sides of the gap.
+
+Measured here on ComfyUI 0.30.0, 28 runs, zero fallbacks:
+
+| | |
+|---|---|
+| actual transformer calls at 20 steps | 11 (+ 9 forecast), unchanged from v0.1.5 |
+| replay pass cost | ~3.3 s, and **zero** transformer blocks |
+| `history_storage=vram` vs `system_ram` | **22.2 min vs 21.9 min, frames bit-identical** |
+
+That last row is the Apple Silicon part. Upstream suggests `vram` to avoid host-to-device
+copies. On unified memory there is no copy to avoid - it is the same physical RAM - so the
+setting buys nothing here. **Leave it on `system_ram`.**
+
+One softer observation, offered as a single data point rather than a result: on a macro water
+prompt at a fixed seed, `euler` produced properly domed droplets with real depth falloff where
+`res_multistep` gave flat, gel-like discs, and euler also forecast one more step (11 actual / 9
+forecast vs 12 / 8). Both workflows here still ship `res_multistep`. Worth an A/B on your own
+content before changing anything.
 
 ## Previz
 

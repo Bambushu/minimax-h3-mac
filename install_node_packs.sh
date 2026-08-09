@@ -39,12 +39,17 @@ $PY -m pip install -q "gguf==0.18.0" || echo "  WARN: gguf==0.18.0 failed to ins
 # survives. Measured on MPS at 0.6 MP/5s/20 steps, same seed: 34:27 vs 47:21 uncached (-27%),
 # 8 of 20 steps forecast, faces intact. EasyCache is faster (31:16) but visibly smears mouths
 # and teeth, so it ships BYPASSED in both. Never enable both at once.
-# PINNED to v0.1.5: Spectrum v0.1.6+ targets a LATER ComfyUI that changed H3's native
-# sampling/audio path. On the ComfyUI 0.30.0 this pack is measured on, v0.1.5 is the matching
-# version (it also carries an Apple MPS fix). If you move to a newer ComfyUI, update Spectrum
-# to latest instead - and know that none of this pack's numbers were measured there.
+# PINNED to v0.2.3 (was v0.1.5). We originally pinned v0.1.5 believing later Spectrum needed
+# a newer ComfyUI. That is NOT true of v0.2.3: it has run 28 times on this same ComfyUI 0.30.0
+# with zero fallbacks. The pin moved because v0.1.5 has a real defect for anyone using this
+# pack -- both workflows ship Spectrum ENABLED, and v0.1.5 uses ONE shared blend weight for
+# both modalities. H3 packs audio and video into a single transformer sequence, so a forecast
+# error in video reaches audio through joint attention and comes back as rough or distorted
+# sound and tripped/doubled syllables. v0.2.1+ splits the controls (audio_blend_weight 0.0)
+# and adds a transformer-free replay pass (~3.3 s) that reconstructs skipped steps from
+# anchors on BOTH sides. Same schedule: 11 actual transformer calls + 9 forecast at 20 steps.
 clone https://github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3.git
-( cd $CN/ComfyUI-Spectrum-MiniMax-H3 && git fetch -q --depth 1 origin tag v0.1.5 2>/dev/null && git -c advice.detachedHead=false checkout -q v0.1.5 || echo "  WARN: could not pin Spectrum v0.1.5, using cloned HEAD" )
+( cd $CN/ComfyUI-Spectrum-MiniMax-H3 && git fetch -q --depth 1 origin tag v0.2.3 2>/dev/null && git -c advice.detachedHead=false checkout -q v0.2.3 || echo "  WARN: could not pin Spectrum v0.2.3, using cloned HEAD" )
 PACKS+=(ComfyUI-Spectrum-MiniMax-H3)
 
 if [[ $TARGET == foxydit || $TARGET == all ]]; then

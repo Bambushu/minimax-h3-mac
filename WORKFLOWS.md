@@ -7,7 +7,7 @@
 
 `./install_node_packs.sh [macmax|foxydit|all]` installs the packs. Run it with nothing
 rendering. MacMax needs three: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8 and
-ComfyUI-Spectrum-MiniMax-H3 (pinned v0.1.5, its node ships enabled). All three are
+ComfyUI-Spectrum-MiniMax-H3 (pinned v0.2.3, its node ships enabled). All three are
 installed for every target because both workflows need them. `ResolutionSelector` is
 ComfyUI core, not a custom node.
 
@@ -98,10 +98,12 @@ a keypress only for faceless b-roll. An earlier build of this port had both acti
 the author explicitly warns against, and an earlier version of these docs recommended
 EasyCache on a 0.991 layout correlation computed on thumbnails that cannot resolve a mouth.
 
-The Spectrum figure is for v0.1.5, the version that matches ComfyUI 0.30.0 and the one the
-installer pins. Its author has since released v0.1.8 (degree 1) claiming about -45% with no
-visible quality loss, but that targets a later ComfyUI that changed H3's sampling and audio
-path, and it is unmeasured here. If you chase it, you leave every number in this pack behind.
+The Spectrum timing figure was measured on v0.1.5; v0.2.3 (the version the installer now
+pins) keeps the same acceleration schedule - 11 actual transformer calls plus 9 forecast at
+20 steps - and adds a transformer-free replay pass costing about 3.3 s, so the figure carries
+over. v0.2.3 has run 28 times on this same ComfyUI 0.30.0 with zero fallbacks; the earlier
+claim that later Spectrum versions need a newer ComfyUI was wrong, and the pin moved because
+v0.1.5 measurably degrades H3's audio (see README).
 
 The port also severs the link feeding VHS_VideoCombine's frame rate and pins it to 24. That
 link carried 60 for the RIFE branch, and with RIFE bypassed every render played 2.5x fast
@@ -138,12 +140,12 @@ run were the four documented model-path repoints. Result: 608x1056, 24 fps, 5.16
 plus AAC stereo, total 48:54 uncached. An earlier build was also rendered with EasyCache
 enabled (total 31:16, cache skipped 9 of 20 steps).
 
-**The shipped file has since changed** (Spectrum now enabled by default), so its md5 no
-longer matches that render. The Spectrum figures quoted here - 34:27, 8 of 20 steps forecast,
-faces intact - were measured at the same canvas, seed, steps and Spectrum dials (degree 1,
-warmup 1) through the scripted driver rather than the GUI. A fresh end-to-end frontend render
-of the current file is pending; until it lands, treat the provenance above as covering the
-graph structure and the uncached and EasyCache numbers, not the Spectrum row.
+**The current file** (md5 `5b13347b82d140ed8544091f5dd06f07`, Spectrum v0.2.3 enabled with
+its shipped dials, degree 1, warmup 1) was rendered end to end the same way: loaded in the
+ComfyUI frontend, queued through its own `graphToPrompt()`, with the four documented
+model-path repoints as the only edits. Result: 608x1056, 24 fps, 5.167 s, h264 plus AAC
+stereo, total 31:48 including model load and the ~3.3 s replay pass, zero Spectrum
+fallbacks. That supersedes the earlier scripted-driver Spectrum figure (34:27 on v0.1.5).
 
 Foxydit was rendered end to end twice on the REF2VA path with one reference image: once at
 the original's 0.5 MP defaults (which also exposed the 60 fps playback bug this port now

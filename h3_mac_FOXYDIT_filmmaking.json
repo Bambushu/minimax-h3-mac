@@ -2151,7 +2151,12 @@
         1,
         8,
         false,
-        "system_ram"
+        "system_ram",
+        true,
+        false,
+        false,
+        true,
+        0.0
       ],
       "color": "#332922",
       "bgcolor": "#593930",
