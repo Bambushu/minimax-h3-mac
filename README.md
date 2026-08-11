@@ -101,8 +101,8 @@ from a fitted curve. That is why fast-changing detail like a mouth survives one 
 other. Sharpness metrics *reward* EasyCache because it injects high-frequency edge noise, so
 judge a cache on a full-size face, not a number.
 
-Both workflows ship `res_multistep`. On one macro water prompt `euler` gave better droplet
-geometry; worth an A/B on your own content.
+Both workflows ship sampler `euler`, not the stock templates' `res_multistep`. Scheduler stays
+`simple`.
 
 ## Chaining
 
