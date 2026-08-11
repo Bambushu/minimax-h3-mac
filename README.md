@@ -154,6 +154,3 @@ times are a strong prior rather than a law. No metric here evaluates audio beyon
 Whisper recovered the words. Chaining is validated at 5s links; longer links are reported
 elsewhere to fall apart around 15s. Audio carried across ambience beds, not tested on a
 musical build. The 2K upscaler and prompt-expander are not open-sourced.
-
-Turbo LoRA is a dead end here: it OOMs at runtime (it targets 99.2% of the checkpoint, and any
-layer carrying a LoRA bypasses the int8 kernel), and merged offline it gives no speedup.
