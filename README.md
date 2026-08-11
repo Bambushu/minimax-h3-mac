@@ -7,7 +7,7 @@ Measured on a 48 GB M5 Pro, ComfyUI 0.30.0, torch 2.13, over roughly 40 renders 
 2026-08-04 to 08-07. One machine, mostly one prompt. Treat the numbers as a strong prior,
 not a law.
 
-Three workflows ship here. See `WORKFLOWS.md` for which to use and what each one contains.
+Two workflows ship here. See `WORKFLOWS.md` for which to use and what each one contains.
 
 ## Models
 
@@ -46,6 +46,13 @@ ASFP8_INT8_EXT=1 python main.py --port 8288 \
 
 H3 loads three models in sequence (encoder 15 GB, DiT 20 GB, VAEs 6 GB) and never needs two
 at once, which is why the memory flags are there.
+
+One later commit is worth taking on top of 0.30.0 rather than upgrading wholesale:
+[Optimize MiniMax-H3 VAE](https://github.com/Comfy-Org/ComfyUI/pull/15446), merged
+2026-08-09, streams the VAE in temporal chunks. Upstream measured peak VRAM down 58% on
+encode and 83% on decode at bit-identical output. `git cherry-pick -x 2a68ce3` applies it to
+0.30.0 without conflicts. Not separately benchmarked here, but it was in place for the
+chaining runs below.
 
 48 GB unified memory is what this was measured on. 32 GB is untested and expected to be
 tight. Below 32 GB is not recommended.
@@ -178,6 +185,70 @@ on one prompt. Dropping resolution saves 16-24% and costs the whole composition.
 Below about 6 steps, speech breaks before video does. At 4 steps the picture is clean but
 dialogue loops or vanishes. Judge audio at 10+ steps.
 
+## Chaining
+
+Both workflows ship with a Motion Context block that continues a clip: the motion carries on
+across the cut, the scene holds, and so does the audio bed. It needs one more pack,
+[ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context).
+
+Every render now saves its latent, about 7 MB, under `output/h3_context/`. To continue one,
+un-bypass Motion Context, Trim and Load Latent, set Load Latent's `clip_index` to the clip
+you are continuing from and Save Latent's to the clip this one is, and queue. The
+continuation comes back exactly 22 frames shorter, because those frames are the pinned
+context and Trim removes them so the two files concatenate cleanly. That length difference is
+the free proof the pack engaged, and it is the first thing to check.
+
+Measured on two 5s clips at 544x960:
+
+| check | result |
+|---|---|
+| frames, clip A then clip B | 124 then 102, exactly 22 fewer |
+| join correlation, A's last frame against B's first | 0.954 |
+| join frame difference | +1.1 sigma against the two clips' own internal motion |
+| audio | the rain bed continues across the cut, with about a 6.5 dB level swell |
+
+Nine links then ran unattended as one reference-to-video sequence, 39s of continuous kitchen
+scene at about 31 to 40 min per link. `samples/sample_MotionContext_chain_25s.mp4` is the
+first 25s of it, hard concatenated with no crossfades and no level matching, so every join is
+visible exactly as rendered.
+
+Three things that cost renders here.
+
+**Write each beat to fill the whole clip.** If the action finishes early, the model can fill
+the remaining frames by cutting to an animated version of one of your reference images. That
+happened twice on the same beat, on two different seeds, with a reference selfie appearing
+inside the kitchen. Rewriting the beat so the pose holds through the take fixed it. Reseeding
+alone did not.
+
+**The first clip's framing is inherited by everything after it.** A wide, drifting frame in
+clip 1 propagated through all nine. Lock the framing you want before starting a chain.
+
+**Resolution has to match between chained clips**, since a latent cannot be resized. The node
+refuses and names both resolutions rather than quietly falling back to something lossy.
+
+The pack also accepts the previous clip's decoded pixels through `context_frames` instead of
+its latent. That path works but pays a lossy round trip on both streams. Use the latent.
+
+## A smaller text encoder
+
+Both workflows carry a bypassed `ClipProj Loader`. It swaps the 14.6 GB GGUF text encoder for
+Qwen3-VL-8B in fp8 plus a 380 MB projection matrix, about 3.7 GB lighter, and it encodes on
+CPU. Needs [ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) and a matrix
+from [NicoLab28/ClipProj-MiniMax-H3](https://huggingface.co/NicoLab28/ClipProj-MiniMax-H3).
+Un-bypass it and wire its `CLIP` output where the GGUF loader's went.
+
+What it buys is length, not speed. Three 5s text-to-video renders completed at 23 to 25 min
+each, a length that did not fit before on 48 GB. Two same-seed reruns of GGUF renders, one
+reference-to-video take with a spoken line and one image-to-video continuation, came back
+with identity, wardrobe, scene and the verbatim line intact, at 29.0 min against 29.2 and
+13.8 against 13.1. Sampling dominates the clock, so a lighter encoder does not make it
+faster.
+
+The projection is an approximation of the full encoder, best measured cosine similarity 0.80,
+and the author reports proper nouns as a known weak spot. One report elsewhere describes
+prompt drift on a talking head; that did not reproduce in the five renders here. Eyeball the
+output before trusting it on a job.
+
 ## Dead ends
 
 **Turbo LoRA does not pay off.** It cannot run at runtime: three attempts OOM'd
@@ -189,11 +260,18 @@ a LoRA falls back to a float linear on a dequantized weight, bypassing the int8 
 Merged offline it loads and renders but gives no speedup at 10 steps and unusable speech at
 4, indistinguishable from base. Untested at runtime on CUDA.
 
-**Latent-space chaining is impossible.** Slicing clip A's last latent as clip B's keyframe
+**Slicing a latent by hand to chain clips.** Taking clip A's last latent as clip B's keyframe
 cannot work on a causal VAE. Probed with identical frames: the first latent of a sequence is
 bit-identical to a single-frame encode (1.000000), the last is 49.20% different (0.873).
 That is causal temporal positioning, not content. The decode-encode round trip costs about
 8% pixel error per hop, and hop2/hop1 is 0.77, so drift converges rather than compounding.
+
+This section previously concluded that latent-space chaining was therefore impossible. That
+was wrong, and it is corrected under Chaining above. The measurement stands, the conclusion
+did not: H3 can pin a run of frames at their own time coordinates and re-inject them at every
+sampling step, which is a different mechanism from slicing one latent into a keyframe slot.
+ComfyUI rejected any pinned frame other than the first or last, and the Motion Context pack
+lifts that check.
 
 **ConvRot weights are stored rotated.** comfy_kitchen stores `W_rot = W @ H_blockT` and
 `dequantize()` rotates back, so `qdata.float() * scale` is not the native-basis weight. The

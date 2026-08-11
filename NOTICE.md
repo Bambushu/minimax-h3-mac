@@ -54,6 +54,23 @@ permission notice are reproduced in full in `LICENSE-MIT.txt`, as that licence r
   `LoadAudioUI` was already bypassed upstream and is not registered on Mac. It was left
   exactly as found and is not counted as a modification.
 
+## Optional node packs referenced by both workflows
+
+Neither is bundled here. Both workflows carry nodes from them, shipped bypassed, and the
+installer clones them under the `extras` target.
+
+- **ComfyUI-H3-Motion-Context** by NikoDemon80,
+  [github.com/NikoDemon80/ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context).
+  Chaining. It lifts a ComfyUI check that rejected pinned frames other than the first or
+  last, which is what makes clip continuation possible at all.
+- **ComfyUI-ClipProj** by NicoLab28,
+  [github.com/nicolab28/ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj),
+  with projection matrices from
+  [huggingface.co/NicoLab28/ClipProj-MiniMax-H3](https://huggingface.co/NicoLab28/ClipProj-MiniMax-H3)
+  (matrices MIT). The smaller text encoder.
+
+Their licences are their own. Support both authors.
+
 ## Upstream versions are pinned above on purpose
 
 Both originals will keep evolving. These ports are snapshots of the versions and dates

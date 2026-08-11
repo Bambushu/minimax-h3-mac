@@ -2,14 +2,19 @@
 
 | file | nodes | extra packs | use it for |
 |---|---|---|---|
-| `MacMax_MiniMaxH3_AppleSilicon.json` | 27 + 3 notes | 3 | default. T2V, I2V and FLF in one graph |
-| `h3_mac_FOXYDIT_filmmaking.json` | 56 | 8 packs, plus a 2nd 21 GB DiT | full rig: 4 reference pictures, video, audio, REF2VA |
+| `MacMax_MiniMaxH3_AppleSilicon.json` | 32 + 4 notes | 3, plus 2 optional | default. T2V, I2V and FLF in one graph |
+| `h3_mac_FOXYDIT_filmmaking.json` | 62 | 8 packs and a 2nd 21 GB DiT, plus 2 optional | full rig: 4 reference pictures, video, audio, REF2VA |
 
-`./install_node_packs.sh [macmax|foxydit|all]` installs the packs. Run it with nothing
+`./install_node_packs.sh [macmax|foxydit|extras|all]` installs the packs. Run it with nothing
 rendering. MacMax needs three: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8 and
 ComfyUI-Spectrum-MiniMax-H3 (pinned v0.2.3, its node ships enabled). All three are
 installed for every target because both workflows need them. `ResolutionSelector` is
 ComfyUI core, not a custom node.
+
+The two optional packs are ComfyUI-H3-Motion-Context, for chaining clips, and
+ComfyUI-ClipProj, for the smaller text encoder. Both are covered in the README. Every node
+they add ships bypassed, so neither pack is needed to render: without them those nodes show
+red, which is cosmetic while they stay bypassed, and deleting them removes it.
 
 For scripted runs use `render_h3.py`. `--dump-graph out.json` emits the API graph. It works
 from `h3_api.json`, which is its own base graph and is not an export of MacMax: the two have
@@ -54,21 +59,33 @@ All ComfyUI core, so they add nothing to the three-pack requirement.
   switch to landscape, in which case set it yourself.
 - `SaveAudio`, bypassed. The audio stem on its own for editing.
 
-Seven nodes ship bypassed: the two mode nodes, EasyCache, and the four export nodes.
-Everything else is
-active. Enabling any of them is one click.
+Two more blocks sit below the graph, both from optional packs:
 
-Verified in ComfyUI: 27 functional nodes and 3 notes, no missing node types, no console
-errors, no overlapping nodes, every functional node inside a group (the three notes sit
+- Chaining. `Motion Context Save Latent` is ACTIVE, so every render writes its latent, about
+  7 MB, and is continuable later. `Motion Context`, `Motion Context Trim` and
+  `Motion Context Load Latent` are bypassed; un-bypass all three to continue a clip. Motion
+  Context deliberately refuses to run with nothing to pin, so it cannot be left on by
+  accident with no context wired. Numbers and the beat-writing rule are in the README.
+- `ClipProj Loader`, bypassed and unconnected. The smaller text encoder, also in the README.
+  Un-bypass it and wire its `CLIP` output where the GGUF loader's went.
+
+Eleven nodes ship bypassed: the two mode nodes, EasyCache, the four export nodes, the three
+chaining nodes and ClipProj. Everything else is active. Enabling any of them is one click.
+
+Verified in ComfyUI: 32 functional nodes and 4 notes, no missing node types, no console
+errors, no overlapping nodes, every functional node inside a group (the notes sit
 above the graph as a header row, deliberately outside).
 
 MacMax has been rendered end to end from this exact file. See the table below.
 
-API node counts once the model paths are repointed: 20 as shipped (Spectrum on, EasyCache
-off), 21 with the first `LoadImage` enabled, 22 with both, 24 with the four export extras
-also enabled, plus one more in each state if you enable EasyCache. The three
+API node counts once the model paths are repointed: 21 as shipped (Spectrum on, EasyCache
+off, Save Latent on), 22 with the first `LoadImage` enabled, 23 with both, 25 with the four
+export extras also enabled, plus one more in each state if you enable EasyCache. Enabling the
+three chaining nodes takes the shipped state to 24. The three
 modes were checked by serialising the prompt: both bypassed gives no `first_frame` or
 `last_frame`, enabling the first adds `first_frame`, enabling both adds `last_frame`.
+Chaining was checked the same way, in both states, and the enabled state resolves
+`context_latent` from Load Latent.
 
 On first load the four model loaders may show red. The workflow uses bare stock filenames.
 If your models sit in subfolders, re-pick them once. That is the only expected error in
@@ -112,6 +129,13 @@ with chopped audio, measured on a real render. Reconnect it if you wire `RIFE VF
 This rig needs a second checkpoint. It ships with the ref2va DiT active
 (`minimax_h3_ref2va_pruned_int8_convrot.safetensors`, about 21 GB, same Comfy-Org repo) and
 the fl2va one bypassed. Toggle the two UNETLoaders to switch paths.
+
+It carries the same two optional blocks as MacMax, wired to the same rule: `Motion Context
+Save Latent` active so every render is continuable, `Motion Context`, `Trim` and
+`Load Latent` bypassed until you chain, and `ClipProj Loader` bypassed and unconnected. Trim
+sits on the raw decode, ahead of the RIFE branch, so the pinned frames come off before
+anything downstream sees them. API node counts: 29 as shipped, 32 with the three chaining
+nodes enabled. The nine-clip chain in the README was rendered on this port.
 
 ### The RIFE bug is upstream, not a Mac problem
 

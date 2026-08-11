@@ -7,7 +7,7 @@
 # ResolutionSelector is ComfyUI CORE (comfy_extras/nodes_resolution.py). No Resolution-Master
 # or KJNodes pack is needed for it.
 #
-# Pass a target: ./install_node_packs.sh macmax | foxydit | all   (default: all)
+# Pass a target: ./install_node_packs.sh macmax | foxydit | extras | all   (default: all)
 #
 # DO NOT RUN THIS WHILE A RENDER IS IN FLIGHT. It writes into the venv and the custom_nodes
 # dir, and a half-installed pack breaks ComfyUI on next start.
@@ -62,6 +62,16 @@ if [[ $TARGET == foxydit || $TARGET == all ]]; then
   # Spectrum is installed above, for every target.
   PACKS+=(rgthree-comfy ComfyUI-VideoHelperSuite ComfyUI-Easy-Use ComfyUI-KJNodes
           ComfyUI-Frame-Interpolation)
+fi
+
+if [[ $TARGET == extras || $TARGET == all ]]; then
+  # --- OPTIONAL: chaining + the smaller text encoder -----------------------------------
+  # Both ship BYPASSED in the workflows, so neither is needed to render. Without the packs
+  # installed their node types will not resolve and ComfyUI shows them red, which is
+  # cosmetic while they stay bypassed. Delete the nodes if you would rather not see it.
+  clone https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context.git
+  clone https://github.com/nicolab28/ComfyUI-ClipProj.git
+  PACKS+=(ComfyUI-H3-Motion-Context ComfyUI-ClipProj)
 fi
 
 
