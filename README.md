@@ -1,13 +1,10 @@
 # MiniMax H3 on Apple Silicon
 
-MiniMax H3 generates video with native stereo audio in one pass. It runs locally on a Mac.
-This is the config that worked, what each setting costs, and what didn't work.
+MiniMax H3 generates video with native stereo audio in one pass. This runs it locally on a Mac.
 
-Measured on a 48 GB M5 Pro, ComfyUI 0.30.0, torch 2.13, over roughly 40 renders on
-2026-08-04 to 08-07, plus about 20 more on 08-10 and 08-11 for the chaining and text-encoder
-sections. One machine, mostly one prompt. Treat the numbers as a strong prior, not a law.
+Two workflows. See `WORKFLOWS.md` for which to use.
 
-Two workflows ship here. See `WORKFLOWS.md` for which to use and what each one contains.
+Measured on a 48 GB M5 Pro, ComfyUI 0.30.0, torch 2.13.
 
 ## Models
 
@@ -20,82 +17,44 @@ Four files, about 41 GB, relative to `ComfyUI/models/`.
 | `vae/` | [minimax_h3_video_vae_fp16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors) | 5.2 GB |
 | `vae/` | [minimax_h3_audio_vae_fp32.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors) | 0.6 GB |
 
-Use the GGUF text encoder. The stock NVFP4-AWQ one is CUDA only. There is a lighter
-alternative that trades a little fidelity for about 3.7 GB, which is what makes 5s clips fit
-on 48 GB. See A smaller text encoder below.
+Use the GGUF text encoder. The stock NVFP4-AWQ one is CUDA only.
 
 ## Setup
 
-ComfyUI 0.30.0 in its own checkout and venv, and stay on 0.30.0: everything here was
-measured there, and the Foxydit author reports a later ComfyUI update breaks the Spectrum
-node and degrades MiniMax audio (2026-08-07, unverified here but from the person who would
-know). Custom nodes:
+ComfyUI 0.30.0 in its own checkout and venv. Stay on 0.30.0: a later update breaks the
+Spectrum node and degrades MiniMax audio.
 
-- ComfyUI-AppleSilicon-FP8, required, the int8 path will not load without it
-- ComfyUI-GGUF, plus `pip install gguf==0.18.0` or it reports IMPORT FAILED
-- ComfyUI-Spectrum-MiniMax-H3, pinned to v0.2.3. MacMax ships with Spectrum enabled, so
-  without this pack the node will not resolve and the graph will not run. Delete the node
-  and reconnect sigma shift to the sampler if you would rather not add it
+Required node packs:
 
-Two more packs are optional. Every node they add ships bypassed, so neither is needed to
-render, and without them those nodes show red while staying inert:
+- **ComfyUI-AppleSilicon-FP8** - the int8 path will not load without it
+- **ComfyUI-GGUF** - plus `pip install gguf==0.18.0`
+- **ComfyUI-Spectrum-MiniMax-H3** - pin **v0.2.3**. Ships enabled, so the graph will not run
+  without it. Earlier versions degrade audio
 
-- ComfyUI-H3-Motion-Context, for chaining clips
-- ComfyUI-ClipProj, for the smaller text encoder
+Optional, both ship bypassed:
 
-`ResolutionSelector` is ComfyUI core (`comfy_extras/nodes_resolution.py`).
-`./install_node_packs.sh macmax` clones the three required packs and pins gguf. The Foxydit
-port needs more; run it with `foxydit`. The two optional packs are under `extras`, and `all`
-installs everything.
+- **ComfyUI-H3-Motion-Context** - chaining
+- **ComfyUI-ClipProj** - smaller text encoder
+
+`./install_node_packs.sh macmax` clones the required three. `foxydit` adds the port's extras,
+`extras` the optional two, `all` everything.
 
 ```bash
 ASFP8_INT8_EXT=1 python main.py --port 8288 \
     --reserve-vram 10 --cache-none --disable-smart-memory
 ```
 
-H3 loads three models in sequence (encoder 15 GB, DiT 20 GB, VAEs 6 GB) and never needs two
-at once, which is why the memory flags are there.
+H3 loads three models in sequence and never needs two at once, hence the memory flags.
 
-One later commit is worth taking on top of 0.30.0 rather than upgrading wholesale:
-[Optimize MiniMax-H3 VAE](https://github.com/Comfy-Org/ComfyUI/pull/15446), merged
-2026-08-09, streams the VAE in temporal chunks. Upstream measured peak VRAM down 58% on
-encode and 83% on decode at bit-identical output. `git cherry-pick -x 2a68ce3` applies it to
-0.30.0 without conflicts. Not separately benchmarked here, but it was in place for the
-chaining runs below.
+Take one commit on top of 0.30.0: [PR #15446](https://github.com/Comfy-Org/ComfyUI/pull/15446)
+streams the VAE in temporal chunks, peak VRAM down 58% encode / 83% decode at identical
+output. `git cherry-pick -x 2a68ce3`.
 
-48 GB unified memory is what this was measured on. 32 GB is untested and expected to be
-tight. Below 32 GB is not recommended.
+48 GB is the tested floor. 32 GB is untested and expected to be tight.
 
-## Cost
+## Render times
 
-Same canvas, 768x1376 vertical, 3s, seed 6120072732051.
-
-| steps | EasyCache | wall | layout vs uncached 20-step |
-|---|---|---|---|
-| 20 | on (0.2) | 27 min | 0.991 |
-| 20 | off | 47 min | reference |
-| 15 | on (0.2) | 25.3 min | 0.940 |
-| 15 | off | 35 min | 0.940 |
-
-All four transcribe the test line exactly.
-
-Other canvases, uncached. The last column is wall clock divided by steps, so it carries model
-load and decode with it. Sampling-only rates are lower and are the ones to compare against
-the EasyCache numbers: the 768x1376 3s run samples at 131.6 s/step against a 142.1 wall rate,
-because 3:29 of its 47.4 minutes is fixed overhead.
-
-| canvas | secs | steps | wall | wall/step |
-|---|---|---|---|---|
-| 864x480 | 3s | 20 | 16.5 min | 49.5 |
-| 768x1376 | 3s | 20 | 47.4 min | 142.1 |
-| 768x1376 + keyframe | 3s | 20 | 57.1 min | 171.2 |
-| 768x1376 | 5s | 20 | 116.8 min | 350.4 |
-
-Keyframe conditioning costs about 17.6% per step.
-
-The tables above are the uncached baseline on the original stack. For reference, what the
-v1.1 stack does at 0.5 MP vertical, 20 steps, with Spectrum on, the lighter text encoder and
-the chunked VAE:
+0.5 MP vertical, 20 steps, Spectrum on, chunked VAE, ClipProj encoder.
 
 | shot | wall |
 |---|---|
@@ -104,209 +63,97 @@ the chunked VAE:
 | 3s reference to video, with a spoken line | ~29 min |
 | 5s reference to video, chained link | ~39 min |
 
-References cost more than duration does: a 3s render carrying two reference images is slower
-than a 5s one carrying none. Budget by megapixels times seconds times references.
+**References cost more than duration.** A 3s render carrying two reference images is slower
+than a 5s one carrying none. Budget by megapixels x seconds x references.
 
-## Cost is a token budget
+## Sizing
 
-Tokens scale with megapixels times seconds. Resolution and duration are not separate limits.
+Cost tracks megapixels x seconds, not resolution and duration separately. About 22k tokens is
+comfortable on 48 GB, 37k runs at roughly 3x the clock and sits near the memory floor.
 
-Sampling rate only, uncached, so these are comparable to each other:
-
-| config | tokens | s/step | source |
-|---|---|---|---|
-| 1.03 MP at 3s | ~22k | 131.6 | 20-step uncached run |
-| 0.6 MP at 5s | ~22k | 137.8 | steps 2-6 of the MacMax proof render, before its cache's first skip |
-| 1.03 MP at 5s | ~37k | ~340 | wall-derived, no clean sampling figure |
-
-The first two are 4.7% apart on twice the duration at 58% of the area, which is what the
-token model predicts. About 22k tokens is comfortable; 37k runs but costs roughly three times
-the wall clock and sits near the memory floor. Want 5s shots, drop to 0.6 MP. Want 1.03 MP,
-keep to 3s.
-
-Length cost is superlinear for the same reason: at 4 steps, 5s (124 frames) took 27 min and
-8s (192 frames) took 89 min. 1.55x the frames, 3.3x the clock. 8s fits in memory. 10s is
-untested, not refuted.
-
-## Speedups
-
-| lever | result |
+| you want | use |
 |---|---|
-| **Spectrum, degree 1** | **ships ON in both workflows.** -27% (34:27 vs 47:21 uncached) at the 0.6 MP/5s default, 8 of 20 steps forecast. Faces hold: teeth and lips stay defined, no artefacts |
-| EasyCache 0.2 | faster still (31:16, -34%) but it **smears mouths and teeth**. Ships bypassed. Fine for faceless b-roll, where the artefacts have nothing to damage. Never run it alongside Spectrum |
-| ASFP8 int8 kernel | no measurable gain on H3 shapes |
-| mtlflashattn | no gain at 15k tokens |
-| SageAttention, Sol-Attn | CUDA only, no Apple Silicon build |
+| 5s shots | 0.6 MP |
+| 1.03 MP | 3s |
 
-Both accelerators skip sampling steps, but not the same way. EasyCache **reuses** a cached
-state; Spectrum **forecasts** the skipped step from a fitted curve. That difference is why
-fast-changing detail like a mouth survives one and not the other.
+Length is superlinear past that: at 4 steps, 5s took 27 min and 8s took 89 min. 8s fits. 10s
+untested.
 
-Measured on face crops resized to a common size, same seed and prompt, so resolution cannot
-win for free:
+Previz at the **final** resolution, 10-12 steps. Dropping resolution saves 16-24% and changes
+the composition entirely (layout correlation 0.26-0.36 across a 2x area change, against 0.83
+for a step change at fixed resolution). Below 6 steps speech breaks before the picture does.
 
-| | wall | fine detail | faces |
-|---|---|---|---|
-| uncached | 47:21 | 0.381 | reference |
-| EasyCache 0.2 | 31:16 | **0.405** | mouths and teeth visibly smeared |
-| Spectrum d1 | 34:27 | 0.368 | teeth and lips hold |
+## Settings
 
-Note that EasyCache scores the **highest** on fine detail while looking the **worst**. It is
-not resolving detail, it is injecting spurious high-frequency edge noise, so any sharpness
-metric rewards it. Earlier versions of this pack recommended EasyCache on exactly that kind
-of evidence: a 0.991 layout correlation computed on 32x32 thumbnails that cannot resolve a
-mouth. If you benchmark a cache, look at a face at full size before you trust a number.
-
-Cutting steps remains the worse lever: 15 steps costs 0.940 layout correlation for -25%.
-Use 20 steps with Spectrum on.
-
-### Spectrum v0.2.3, and one Apple Silicon finding
-
-This pack now pins **v0.2.3**, not v0.1.5. If you took an earlier copy, update: MacMax ships
-Spectrum enabled, and v0.1.5 degrades H3's audio.
-
-Why that happens is specific to H3. It does not generate audio and video as separate streams -
-they are packed into one transformer sequence and interact through joint attention on different
-shifted timestep schedules. v0.1.5 applied a single shared blend weight to both, so a forecast
-error in video reached audio and came back as rough or distorted sound, tripped words and
-doubled syllables. Zeroing the audio blend alone does not fix it, because the next *actual*
-transformer call still sees the modified video state alongside the audio. v0.2.1+ separates the
-controls and adds a transformer-free replay pass that rebuilds skipped steps from anchors on
-both sides of the gap.
-
-Measured here on ComfyUI 0.30.0, 28 runs, zero fallbacks:
-
-| | |
+| lever | verdict |
 |---|---|
-| actual transformer calls at 20 steps | 11 (+ 9 forecast), unchanged from v0.1.5 |
-| replay pass cost | ~3.3 s, and **zero** transformer blocks |
-| `history_storage=vram` vs `system_ram` | **22.2 min vs 21.9 min, frames bit-identical** |
+| **Spectrum, degree 1** | **ships ON.** -27% wall, faces hold |
+| EasyCache 0.2 | -34% but smears mouths and teeth. Ships bypassed, fine for faceless b-roll. Never alongside Spectrum |
+| steps | 20. 15 costs real layout for -25% |
+| `history_storage` | `system_ram`. On unified memory `vram` buys nothing (22.2 vs 21.9 min, bit-identical) |
+| ASFP8 int8 kernel, mtlflashattn | no measurable gain on H3 shapes |
+| SageAttention, Sol-Attn | CUDA only |
 
-That last row is the Apple Silicon part. Upstream suggests `vram` to avoid host-to-device
-copies. On unified memory there is no copy to avoid - it is the same physical RAM - so the
-setting buys nothing here. **Leave it on `system_ram`.**
+Both accelerators skip steps differently: EasyCache reuses a cached state, Spectrum forecasts
+from a fitted curve. That is why fast-changing detail like a mouth survives one and not the
+other. Sharpness metrics *reward* EasyCache because it injects high-frequency edge noise, so
+judge a cache on a full-size face, not a number.
 
-One softer observation, offered as a single data point rather than a result: on a macro water
-prompt at a fixed seed, `euler` produced properly domed droplets with real depth falloff where
-`res_multistep` gave flat, gel-like discs, and euler also forecast one more step (11 actual / 9
-forecast vs 12 / 8). Both workflows here still ship `res_multistep`. Worth an A/B on your own
-content before changing anything.
-
-## Previz
-
-Previz at the final resolution with 10-12 steps. Never lower the resolution.
-
-| change | layout | verdict |
-|---|---|---|
-| 0.2 MP vs 0.4 MP, 10 steps both | 0.257 | different shot |
-| 0.3 MP vs 0.4 MP, 10 steps both | 0.361 | different shot |
-| 0.4 MP at 10 vs 0.4 MP at 20 | 0.832 | same composition |
-
-Measured at 0.2 to 0.4 MP and applied at 1.03 MP, so it is an extrapolation resting largely
-on one prompt. Dropping resolution saves 16-24% and costs the whole composition.
-
-Below about 6 steps, speech breaks before video does. At 4 steps the picture is clean but
-dialogue loops or vanishes. Judge audio at 10+ steps.
+Both workflows ship `res_multistep`. On one macro water prompt `euler` gave better droplet
+geometry; worth an A/B on your own content.
 
 ## Chaining
 
-Both workflows ship with a Motion Context block that continues a clip: the motion carries on
-across the cut, the scene holds, and so does the audio bed. It needs one more pack,
+Both workflows ship a Motion Context block that continues a clip: motion carries across the
+cut, the scene holds, and so does the audio bed. Needs
 [ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context).
 
-Every render now saves its latent, about 7 MB, under `output/h3_context/`. To continue one,
-un-bypass Motion Context, Trim and Load Latent, set Load Latent's `clip_index` to the clip
-you are continuing from and Save Latent's to the clip this one is, and queue.
+Every render saves its latent, about 7 MB, under `output/h3_context/`. To continue one:
+un-bypass Motion Context, Trim and Load Latent, set Load Latent's `clip_index` to the clip you
+are continuing from and Save Latent's to this one, queue.
 
-**The continuation comes back exactly 22 frames shorter.** Those frames are the pinned
-context and Trim removes them so the two files concatenate cleanly. It is the free proof the
-pack engaged, and the first thing to check.
+**The continuation comes back exactly 22 frames shorter.** Those are the pinned context frames
+and Trim removes them so the files concatenate cleanly. That length difference is the free
+proof it engaged, and the first thing to check.
 
-On two 5s clips at 544x960 the join measured as continuous: correlation 0.95, and the frame
-difference across the cut sat inside the range of the clips' own internal motion rather than
-above it. The audio bed carried across, a little louder on the far side. Nine links then ran
-as one sequence, 39s of continuous scene, around 40 min per link with two reference images on
-each.
-`samples/sample_MotionContext_chain_25s.mp4` is the first 25s, hard concatenated with no
-crossfades and no level matching, so every join is visible as rendered.
+Measured on two 5s clips at 544x960: join correlation 0.95, frame difference across the cut
+inside the clips' own internal motion. Nine links ran as one sequence, 39s continuous.
+`samples/sample_MotionContext_chain_25s.mp4` is the first 25s, hard concatenated, no
+crossfades, no level matching.
 
-Three things that cost renders here.
+Three rules:
 
-**Write each beat to fill the whole clip.** If the action finishes early, the model can fill
-the remaining frames by cutting to an animated version of one of your reference images. That
-happened twice on the same beat, on two seeds, with a reference selfie appearing inside the
-kitchen. Rewriting the beat so the pose holds through the take fixed it. Reseeding did not.
+- **Write each beat to fill the whole clip.** If the action finishes early the model fills the
+  rest by cutting to an animated version of one of your reference images. Reseeding does not
+  fix it, rewriting the beat does.
+- **Lock framing in clip 1.** Every later clip inherits it.
+- **Resolution must match** across chained clips. The node refuses rather than falling back.
 
-**The first clip's framing is inherited by everything after it.** A wide, drifting frame in
-clip 1 propagated through all nine. Lock the framing before starting a chain.
+The pack also accepts decoded pixels via `context_frames`, but that pays a lossy round trip on
+both streams. Use the latent.
 
-**Resolution has to match between chained clips**, since a latent cannot be resized. The node
-refuses and names both resolutions rather than quietly falling back to something lossy.
+## Smaller text encoder
 
-The pack also accepts the previous clip's decoded pixels through `context_frames` instead of
-its latent. That works but pays a lossy round trip on both streams. Use the latent.
+Both workflows carry a bypassed `ClipProj Loader`. It swaps the 14.6 GB GGUF encoder for
+Qwen3-VL-8B fp8 plus a 380 MB projection matrix, about 3.7 GB lighter, encoding on CPU. Needs
+[ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) and a matrix from
+[NicoLab28/ClipProj-MiniMax-H3](https://huggingface.co/NicoLab28/ClipProj-MiniMax-H3).
+Un-bypass and wire its `CLIP` output where the GGUF loader's went.
 
-## A smaller text encoder
+**It buys length, not speed.** 5s renders fit on 48 GB, which they did not before. Two
+same-seed reruns against the GGUF encoder held identity, wardrobe, scene and a verbatim spoken
+line at the same wall clock. Sampling dominates either way.
 
-Both workflows carry a bypassed `ClipProj Loader`. It swaps the 14.6 GB GGUF text encoder for
-Qwen3-VL-8B in fp8 plus a 380 MB projection matrix, about 3.7 GB lighter, and it encodes on
-CPU. Needs [ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) and a matrix
-from [NicoLab28/ClipProj-MiniMax-H3](https://huggingface.co/NicoLab28/ClipProj-MiniMax-H3).
-Un-bypass it and wire its `CLIP` output where the GGUF loader's went.
-
-What it buys is length, not speed. Three 5s text-to-video renders came in around 24 min each,
-a length that did not fit before on 48 GB. Two same-seed reruns of GGUF renders, one
-reference-to-video take with a spoken line and one image-to-video continuation, held identity,
-wardrobe, scene and the verbatim line, at the same wall clock to within a minute. Sampling
-dominates, so a lighter encoder does not make anything faster.
-
-The projection is an approximation of the full encoder, and the author reports proper nouns as
-a known weak spot. One report elsewhere describes
-prompt drift on a talking head; that did not reproduce in the five renders here. Eyeball the
+The projection is an approximation; the author reports proper nouns as a weak spot. Eyeball
 output before trusting it on a job.
-
-## Dead ends
-
-**Turbo LoRA does not pay off.** It cannot run at runtime: three attempts OOM'd
-byte-identically (MPS allocated 37.20 GiB, max allowed 37.44) across a 2.6x canvas change
-and a 4 GB `--reserve-vram` change. Identical numbers mean the allocation is
-workload-independent, so canvas and step count are not levers, and `--reserve-vram` does not
-set that ceiling. The LoRA targets 208 layers, 99.2% of the checkpoint, and a layer carrying
-a LoRA falls back to a float linear on a dequantized weight, bypassing the int8 kernel.
-Merged offline it loads and renders but gives no speedup at 10 steps and unusable speech at
-4, indistinguishable from base. Untested at runtime on CUDA.
-
-**Slicing a latent by hand to chain clips.** Taking clip A's last latent as clip B's keyframe
-cannot work on a causal VAE. Probed with identical frames: the first latent of a sequence is
-bit-identical to a single-frame encode (1.000000), the last is 49.20% different (0.873).
-That is causal temporal positioning, not content. The decode-encode round trip costs about
-8% pixel error per hop, and hop2/hop1 is 0.77, so drift converges rather than compounding.
-
-This section previously concluded that latent-space chaining was therefore impossible. That
-was wrong, and it is corrected under Chaining above. The measurement stands, the conclusion
-did not: H3 can pin a run of frames at their own time coordinates and re-inject them at every
-sampling step, which is a different mechanism from slicing one latent into a keyframe slot.
-ComfyUI rejected any pinned frame other than the first or last, and the Motion Context pack
-lifts that check.
-
-**ConvRot weights are stored rotated.** comfy_kitchen stores `W_rot = W @ H_blockT` and
-`dequantize()` rotates back, so `qdata.float() * scale` is not the native-basis weight. The
-difference measured 136.62%. Merging an unrotated delta into it produces a checkpoint that
-loads fine and renders plausibly while being wrong. Use
-`comfy_kitchen.tensor.int8.TensorWiseINT8Layout` in both directions. A dequant-requant round
-trip matching the stored int8 exactly proves only self-consistency within the stored basis,
-not that the basis is native.
 
 ## Limits
 
-One machine, one model config. The cost table will not transfer directly. The previz
-protocol and several correlations rest largely on one prompt. No metric here evaluates audio
-beyond whether Whisper recovered the words. The 2K upscaler and prompt-expander are not
-open-sourced.
+One machine, one model config, and several correlations rest largely on one prompt, so the
+times are a strong prior rather than a law. No metric here evaluates audio beyond whether
+Whisper recovered the words. Chaining is validated at 5s links; longer links are reported
+elsewhere to fall apart around 15s. Audio carried across ambience beds, not tested on a
+musical build. The 2K upscaler and prompt-expander are not open-sourced.
 
-The chaining numbers are one join measured properly and one nine-link sequence watched end to
-end, all at 5s. Longer links are reported elsewhere to fall apart around 15s, where the fixed
-22 pinned frames stop being a large enough share of the clip; not tested here. Audio carried
-across a cut on two ambience beds, but a musical build across a join is likelier to show the
-seam and was not tested. The text-encoder comparison is five renders, two of them same-seed
-against the encoder they replace.
+Turbo LoRA is a dead end here: it OOMs at runtime (it targets 99.2% of the checkpoint, and any
+layer carrying a LoRA bypasses the int8 kernel), and merged offline it gives no speedup.

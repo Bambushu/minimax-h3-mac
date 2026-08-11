@@ -6,19 +6,16 @@
 | `h3_mac_FOXYDIT_filmmaking.json` | 62 | 8 packs and a 2nd 21 GB DiT, plus 2 optional | full rig: 4 reference pictures, video, audio, REF2VA |
 
 `./install_node_packs.sh [macmax|foxydit|extras|all]` installs the packs. Run it with nothing
-rendering. MacMax needs three: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8 and
-ComfyUI-Spectrum-MiniMax-H3 (pinned v0.2.3, its node ships enabled). All three are
-installed for every target because both workflows need them. `ResolutionSelector` is
+rendering. Both workflows need the same three: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8 and
+ComfyUI-Spectrum-MiniMax-H3 (pinned v0.2.3, its node ships enabled). `ResolutionSelector` is
 ComfyUI core, not a custom node.
 
-The two optional packs are ComfyUI-H3-Motion-Context, for chaining clips, and
-ComfyUI-ClipProj, for the smaller text encoder. Both are covered in the README. Every node
-they add ships bypassed, so neither pack is needed to render: without them those nodes show
-red, which is cosmetic while they stay bypassed, and deleting them removes it.
+The two optional packs, ComfyUI-H3-Motion-Context and ComfyUI-ClipProj, are covered in the
+README. Every node they add ships bypassed, so neither is needed to render. Without them those
+nodes show red, which is cosmetic while bypassed.
 
-For scripted runs use `render_h3.py`. `--dump-graph out.json` emits the API graph. It works
-from `h3_api.json`, which is its own base graph and is not an export of MacMax: the two have
-diverged and `h3_api.json` still carries `ImageResizeKJv2` and `UnetLoaderGGUF`.
+For scripted runs use `render_h3.py`; `--dump-graph out.json` emits the API graph. It works
+from `h3_api.json`, its own base graph, not an export of MacMax.
 
 ## MacMax
 
@@ -33,66 +30,41 @@ SPEED               Spectrum (on), EasyCache (off), sigma shift
 SAMPLING            internals
 OUTPUT              decode, mux, save
 EXTRAS              audio preview, 1080p export, audio stem
+CHAINING + LOW-RAM  Motion Context, ClipProj
 ```
 
-The two `LoadImage` nodes ship collapsed and bypassed. Leave both off for T2V, enable the
-first for I2V, enable both for FLF. `MiniMaxH3ImageToVideo` already takes optional
+Defaults: 0.6 MP at 5s, 20 steps, Spectrum ON (degree 1 / warmup 1), EasyCache present but
+OFF. It also exposes `MiniMaxH3SigmaShift` (12/3), which the shipped ComfyUI template omits.
+
+**Modes.** The two `LoadImage` nodes ship collapsed and bypassed. Leave both off for T2V,
+enable the first for I2V, enable both for FLF. `MiniMaxH3ImageToVideo` already takes optional
 `first_frame` and `last_frame`, so no switches or extra packs are needed.
 
-MacMax does not do R2V. Carrying identity from reference stills uses a different
-conditioning node (`MiniMaxH3ReferenceToVideo`); the Foxydit port covers that.
+MacMax does not do R2V. Carrying identity from reference stills needs
+`MiniMaxH3ReferenceToVideo`; use the Foxydit port.
 
-Defaults are 0.6 MP at 5s, 20 steps, Spectrum ON at degree 1 / warmup 1, and EasyCache
-present but OFF (see the face warning under Numbers that matter). It also exposes `MiniMaxH3SigmaShift` (12/3), which the shipped ComfyUI
-template omits.
+**Extras**, all ComfyUI core:
 
-### Extras
+- `PreviewAudio`, active. H3's headline feature is the audio, so hear it without leaving ComfyUI
+- 1080x1920 export chain, bypassed. Render at 0.6 MP and upscale for delivery rather than
+  paying 3x to render at 1.03 MP. Target is fixed 1080x1920, so set it yourself for landscape
+- `SaveAudio`, bypassed. The audio stem alone
 
-All ComfyUI core, so they add nothing to the three-pack requirement.
+**Chaining + low-RAM group**, from the optional packs:
 
-- `PreviewAudio`, active. H3's headline feature is the audio and there was no way to hear it
-  without leaving ComfyUI to open the file. Free to run.
-- 1080x1920 export chain, bypassed: `ImageScale` (lanczos) into a second `CreateVideo` and
-  `SaveVideo`. This is the practical half of the token budget. Cost is tokens, so render at
-  0.6 MP and upscale for delivery rather than paying three times as much to render at
-  1.03 MP. The target is a fixed 1080x1920, correct for the 9:16 default but wrong if you
-  switch to landscape, in which case set it yourself.
-- `SaveAudio`, bypassed. The audio stem on its own for editing.
+- `Motion Context Save Latent` is ACTIVE, so every render writes a ~7 MB latent and is
+  continuable later. `Motion Context`, `Trim` and `Load Latent` are bypassed; un-bypass all
+  three to continue a clip. Motion Context refuses to run with nothing to pin, so it cannot be
+  left on by accident
+- `ClipProj Loader`, bypassed and unconnected. Un-bypass and wire its `CLIP` output where the
+  GGUF loader's went
 
-Two more blocks sit in their own group at the right end of the graph, `CHAINING + LOW-RAM
-ENCODER`, both from optional packs:
+Eleven nodes ship bypassed: two mode nodes, EasyCache, four export nodes, three chaining nodes
+and ClipProj. Enabling any is one click.
 
-- Chaining. `Motion Context Save Latent` is ACTIVE, so every render writes its latent, about
-  7 MB, and is continuable later. `Motion Context`, `Motion Context Trim` and
-  `Motion Context Load Latent` are bypassed; un-bypass all three to continue a clip. Motion
-  Context deliberately refuses to run with nothing to pin, so it cannot be left on by
-  accident with no context wired. Numbers and the beat-writing rule are in the README.
-- `ClipProj Loader`, bypassed and unconnected. The smaller text encoder, also in the README.
-  Un-bypass it and wire its `CLIP` output where the GGUF loader's went.
-
-Eleven nodes ship bypassed: the two mode nodes, EasyCache, the four export nodes, the three
-chaining nodes and ClipProj. Everything else is active. Enabling any of them is one click.
-
-Verified in ComfyUI: 32 functional nodes and 4 notes, no missing node types, no console
-errors, no overlapping nodes, every functional node inside a group (the three header notes sit
-above the graph as a header row, deliberately outside).
-
-MacMax has been rendered end to end from this exact v1.1 file, which also confirmed that Save
-Latent writes a continuable latent on a stock render with the shipped path.
-
-API node counts once the model paths are repointed: 21 as shipped (Spectrum on, EasyCache
-off, Save Latent on), 22 with the first `LoadImage` enabled, 23 with both, 25 with the four
-export extras also enabled, plus one more in each state if you enable EasyCache. Enabling the
-three chaining nodes takes the shipped state to 24. The three
-modes were checked by serialising the prompt: both bypassed gives no `first_frame` or
-`last_frame`, enabling the first adds `first_frame`, enabling both adds `last_frame`.
-Chaining was checked the same way, in both states, and the enabled state resolves
-`context_latent` from Load Latent.
-
-On first load the four model loaders may show red. The workflow uses bare stock filenames.
-If your models sit in subfolders, re-pick them once. That is the only expected error in
-MacMax. The Foxydit port additionally shows its bypassed unregistered nodes in red (six types,
-listed under What was actually verified); that is normal, not a broken install.
+API node counts once model paths are repointed: 21 as shipped, 22 with the first `LoadImage`,
+23 with both, 24 with chaining enabled, 25 with the export extras, plus one more in any state
+with EasyCache.
 
 ## Foxydit port
 
@@ -103,168 +75,74 @@ cleaning, group bypassers.
 
 Bypassed for Mac, left visible rather than deleted:
 
-- `SolAttnPatch`, Sol-Attn needs triton and there is no Apple Silicon build
+- `SolAttnPatch`, Sol-Attn needs triton, no Apple Silicon build
 - `PathchSageAttentionKJ`, SageAttention is CUDA only
 - `RIFEInterpolation`, see below
 
-`CLIPLoader` swapped to `CLIPLoaderGGUF`.
+`CLIPLoader` swapped to `CLIPLoaderGGUF`. Spectrum enabled at degree 1 / warmup 1 rather than
+upstream's degree 4 / warmup 5; EasyCache stays bypassed. Never both, per the original's own
+note.
 
-The original's own note says to use Spectrum or EasyCache, never both. This port keeps that
-rule and enables Spectrum, at degree 1 / warmup 1 rather than the upstream degree 4 /
-warmup 5. Re-measured on face crops at full size, Spectrum holds mouths and teeth where
-EasyCache smears them, at -27% wall against uncached. EasyCache stays bypassed and is worth
-a keypress only for faceless b-roll. An earlier build of this port had both active, which
-the author explicitly warns against, and an earlier version of these docs recommended
-EasyCache on a 0.991 layout correlation computed on thumbnails that cannot resolve a mouth.
-
-The Spectrum timing figure was measured on v0.1.5; v0.2.3 (the version the installer now
-pins) keeps the same acceleration schedule - 11 actual transformer calls plus 9 forecast at
-20 steps - and adds a transformer-free replay pass costing about 3.3 s, so the figure carries
-over. v0.2.3 has run 28 times on this same ComfyUI 0.30.0 with zero fallbacks; the earlier
-claim that later Spectrum versions need a newer ComfyUI was wrong, and the pin moved because
-v0.1.5 measurably degrades H3's audio (see README).
-
-The port also severs the link feeding VHS_VideoCombine's frame rate and pins it to 24. That
-link carried 60 for the RIFE branch, and with RIFE bypassed every render played 2.5x fast
-with chopped audio, measured on a real render. Reconnect it if you wire `RIFE VFI` in.
+The port severs the link feeding `VHS_VideoCombine`'s frame rate and pins it to 24. That link
+carried 60 for the RIFE branch, and with RIFE bypassed every render played 2.5x fast with
+chopped audio. Reconnect it if you wire `RIFE VFI` in.
 
 This rig needs a second checkpoint. It ships with the ref2va DiT active
-(`minimax_h3_ref2va_pruned_int8_convrot.safetensors`, about 21 GB, same Comfy-Org repo) and
-the fl2va one bypassed. Toggle the two UNETLoaders to switch paths.
+(`minimax_h3_ref2va_pruned_int8_convrot.safetensors`, ~21 GB, same Comfy-Org repo) and the
+fl2va one bypassed. Toggle the two UNETLoaders to switch paths.
 
-It carries the same two optional blocks as MacMax, wired to the same rule: `Motion Context
-Save Latent` active so every render is continuable, `Motion Context`, `Trim` and
-`Load Latent` bypassed until you chain, and `ClipProj Loader` bypassed and unconnected. Trim
-sits on the raw decode, ahead of the RIFE branch, so the pinned frames come off before
-anything downstream sees them. API node counts: 29 as shipped, 32 with the three chaining
-nodes enabled. The nine-clip chain in the README was rendered on this port.
+Same optional blocks as MacMax. Trim sits on the raw decode, ahead of the RIFE branch, so
+pinned frames come off before anything downstream sees them. API node counts: 29 as shipped,
+32 with chaining enabled.
 
-### The RIFE bug is upstream, not a Mac problem
+**RIFE.** The original ships `RIFEInterpolation` active, but no version of
+ComfyUI-Frame-Interpolation registers that node type; it provides `RIFE VFI` with a different
+signature, so left active the graph fails validation on any platform. RIFE itself works on
+Apple Silicon: `RIFE VFI` with `rife47.pth`, float32, ensemble on, took 8 frames of a 608x1056
+clip to 15 in 12 s on MPS. Delete the bypassed node and wire `RIFE VFI` in its place.
 
-The original ships `RIFEInterpolation` active. No version of ComfyUI-Frame-Interpolation
-registers that node type; it provides `RIFE VFI` with a different signature. Left active the
-graph fails prompt validation on any platform.
+## Expected red nodes
 
-RIFE itself works on Apple Silicon. Measured: `RIFE VFI` with `rife47.pth`, float32,
-ensemble on, took 8 frames of a 608x1056 clip to 15 in 12 seconds on MPS, including the
-first-run checkpoint download. To use it, delete the bypassed node and wire `RIFE VFI` in
-its place. `multiplier` 2 doubles the frame rate.
+Both workflows use bare stock model filenames. If your models sit in subfolders ComfyUI
+rejects the prompt at validation. Re-pick the file in each loader once.
 
-## What was actually verified
-
-Clean install of the node packs, 2026-08-07, ComfyUI 0.30.0. What follows is what the logs
-prove, not more:
-
-| workflow | loads in the UI | server accepted the prompt | full render completed |
-|---|---|---|---|
-| MacMax | yes | yes, after repointing 4 model paths | yes |
-| Foxydit | yes, 56 nodes | yes, after repointing | yes |
-
-MacMax was rendered end to end from md5 `f59d355f58922e84b7593f5302beba94`, loaded in the
-ComfyUI frontend and queued through its own `graphToPrompt()`. The only edits before pressing
-run were the four documented model-path repoints. Result: 608x1056, 24 fps, 5.167 s, h264
-plus AAC stereo, total 48:54 uncached. An earlier build was also rendered with EasyCache
-enabled (total 31:16, cache skipped 9 of 20 steps).
-
-**The current graph** was proof-rendered from md5 `5b13347b82d140ed8544091f5dd06f07`
-(Spectrum v0.2.3 enabled with its shipped dials, degree 1, warmup 1); the shipped file
-(md5 `d6b4082453b2372fd40a42a3490c304f`) differs from it only in note-panel text fixed
-after that render - no executing node changed. It was rendered end to end the same way: loaded in the
-ComfyUI frontend, queued through its own `graphToPrompt()`, with the four documented
-model-path repoints as the only edits. Result: 608x1056, 24 fps, 5.167 s, h264 plus AAC
-stereo, total 31:48 including model load and the ~3.3 s replay pass, zero Spectrum
-fallbacks. That supersedes the earlier scripted-driver Spectrum figure (34:27 on v0.1.5).
-
-Foxydit was rendered end to end twice on the REF2VA path with one reference image: once at
-the original's 0.5 MP defaults (which also exposed the 60 fps playback bug this port now
-fixes) and once at 768x1376, 24 fps, 3.04 s with stereo audio, uncached. It needs reference
-images, which do not ship; point the Picture 1 loader at your own.
-
-Both workflows use bare stock model filenames. If your models sit in subfolders, ComfyUI
-rejects the prompt at validation:
-
-```
-Failed to validate prompt for output 2568:
-* VAELoader: Value not in list: 'MiniMaxH3/minimax_h3_audio_vae_fp32.safetensors' not in [...]
-```
-
-That is a model-path problem, not a porting problem. Re-pick the file in the loader once and
-it goes away.
-
-Six node types stay unresolved on a Mac install: `SolAttnPatch`,
+Foxydit additionally leaves six node types unresolved on a Mac: `SolAttnPatch`,
 `MiniMaxH3MemoryEfficientSageAttentionPatch`, `RIFEInterpolation`, `LoadAudioUI`, and
 rgthree's `Fast Groups Bypasser` and `Label`. They ship bypassed, so ComfyUI drops them when
-building the API prompt and the graph still validates, but they show red in the editor. Do
-not un-bypass them.
+building the API prompt. Do not un-bypass them.
 
-which does not exist. This is not something this port introduced: the upstream original has
-the same two, byte for byte, and ComfyUI loads it anyway. Flagged here so nobody spends an
-afternoon on it.
+If you write your own validator: 46 boundary links in the Foxydit subgraph use negative
+sentinel IDs (`-10`, `-20`) for subgraph inputs and outputs. Those are valid.
 
-If you write your own validator, note that the other 46 boundary links in that subgraph use
-negative sentinel IDs (`-10`, `-20`) for the subgraph's own inputs and outputs. Those are
-valid. A naive check that requires every link endpoint to be a real node ID will report all
-48 as broken.
+## Verified
 
-## What "layout correlation" means
+Clean install, ComfyUI 0.30.0. Both workflows load, validate and render end to end from the
+shipped files, with the documented model-path repoints as the only edits.
 
-Every correlation here comes from `compare_render.py`. It is a crude structural metric, not
-a perceptual one. No LPIPS, no SSIM, no FVD.
+- MacMax: 608x1056, 24 fps, 5.167 s, h264 + AAC stereo, 31:48 total with Spectrum v0.2.3
+  enabled, zero fallbacks. Save Latent wrote a continuable latent on that stock render
+- Foxydit: rendered twice on the REF2VA path with one reference image, at 0.5 MP and at
+  768x1376. Reference images do not ship, point Picture 1 at your own
 
-- layout: Pearson correlation of mean-centred 32x32 greyscale frames, sampled at 5%, 35%,
-  65% and 95% of the clip, averaged
-- detail: the same at 128x128
-- motion: Pearson correlation of per-frame motion-energy curves, 12 samples, each the mean
-  absolute difference between consecutive 64x64 luma frames
+## EasyCache, if you enable it
 
-Luma only, so it cannot see colour shifts. The "above 0.8 is the same composition" threshold
-is our convention, not a validated boundary. Two clips can score 0.99 and still differ
-visibly. Sample size is roughly 40 renders on one machine, and for the correlations
-specifically, one prompt at one canvas. No metric here evaluates audio; audio claims are
-levels and Whisper transcripts only.
+It is a b-roll tool. At 0.6 MP with a face in frame it visibly breaks up the mouth; at 1.03 MP
+the same test came back clean, because more face pixels means the cached-step error hurts
+proportionally less. Rule of thumb: faces at 0.6 MP and below, off; faces at ~1 MP, judge your
+own output; no faces, on.
 
-## Numbers that matter
+| canvas | saving |
+|---|---|
+| 0.6 MP at 5s | -42% sampling, -36% wall |
+| 1.03 MP at 3s | -43% |
+| 0.4 MP | -13% |
 
-Cost is a token budget: tokens scale with megapixels times seconds. About 22k is
-comfortable, which is 1.03 MP at 3s (131.6 s/step) or 0.6 MP at 5s (137.8 s/step). Both are
-sampling-only rates from uncached runs, so they are comparable to each other. 1.03 MP at 5s
-is about 37k tokens, runs, and costs three times the wall clock.
+Skipped steps: 9 of 20, or 5 of 15.
 
-EasyCache is a b-roll tool at low resolution. A seed-controlled A/B at the MacMax defaults
-(same seed, prompt and canvas, cache the only variable) showed visible pixel breakup around
-the mouth and face with the cache on and a clean result with it off. The structural layout
-metric scores them 0.991-similar because it is computed on thumbnails that cannot resolve a
-mouth. The workflows therefore ship their caches bypassed.
+## Metrics
 
-Canvas changes the verdict: the same test at 1.03 MP / 3s with the cache on came back clean,
-in stills and in motion. More face pixels means the cached-step error hurts proportionally
-less. Rule of thumb: faces at 0.6 MP and below, cache off; faces at ~1 MP, cache is usable,
-judge your own output; no faces, cache on.
-
-For shots without faces it pays off differently by canvas, so quote the one that matches
-your render:
-
-| canvas | EasyCache saving | layout |
-|---|---|---|
-| 0.6 MP at 5s (the shipped default) | -42% | not measured at this canvas |
-| 1.03 MP at 3s | -43% | 0.991 |
-| 0.4 MP | about -13% | 0.997 |
-
-The default-canvas figure comes from the MacMax proof render. The cache's first skipped step
-in that run came after step 6 (visible in the per-step rates), so steps 2-6 are uncached and
-cost 137.8 s/step, which projects to 45.9 min for 20 uncached steps. Actual cached sampling
-was 26.6 min, so -42%. Same run, same seed, same process, which makes it a tighter comparison
-than two separate runs. ComfyUI's own counter reports 1.82x for the same render; that is
-computed from skipped steps, not wall clock, and does not include the steps before the cache
-engages.
-
-Those are sampling-only figures. Wall clock adds a fixed ~3.5 min of model loading either
-way, so the two full renders of this workflow (48:54 uncached, 31:16 cached, different
-builds) show about -36% wall. Quote -42% for sampling, -36% for total wall at this canvas.
-
-Skipped-step counts, since the ratio is what people quote: 9 of 20 at 20 steps, 5 of 15 at
-15 steps. Cutting steps instead costs 0.940 for -25%.
-
-Below about 6 steps, speech breaks before video does.
-
-Full detail and the dead ends are in `README.md`.
+Correlations here come from `compare_render.py`: Pearson correlation of mean-centred greyscale
+frames, 32x32 for layout, 128x128 for detail, sampled at four points in the clip. Luma only,
+so it cannot see colour shifts, and it cannot resolve a mouth. "Above 0.8 is the same
+composition" is a convention here, not a validated boundary. No LPIPS, SSIM or FVD. No metric
+here evaluates audio beyond levels and Whisper transcripts.
