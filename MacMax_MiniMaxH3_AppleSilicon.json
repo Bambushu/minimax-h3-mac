@@ -2261,7 +2261,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "## CHAINING (Motion Context) + LOW-RAM TEXT ENCODER\n\n**Chain clips (motion + audio continue across the cut).** Needs\n[ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context).\nEvery render already SAVES its latent (Save Latent node is active; ~7 MB per clip under\noutput/h3_context/). To CONTINUE a clip: un-bypass the three parked nodes (Motion Context,\nTrim, Load Latent), set Load Latent clip_index to the clip you continue FROM and Save\nLatent clip_index to the clip this one IS, queue. The continuation comes back exactly 22\nframes shorter (the pinned context, trimmed for clean concat). Validated on a 48GB M5:\n5s + 5s join r=0.95, the audio bed continues (small level swell). Resolution must match\nbetween chained clips. Motion Context refuses to run without a context latent wired.\n\n**Low-RAM text encoder (optional).** The bypassed ClipProj Loader swaps the 13.6 GB 32B\nGGUF encoder for Qwen3-VL-8B fp8 (+380 MB projection) ~= 3.7 GB lighter - this is what\nmakes 5s takes fit in 48 GB. Needs\n[ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) + matrices from\nHF NicoLab28/ClipProj-MiniMax-H3. To use: un-bypass and wire its CLIP output in place of\nthe GGUF loader. Seed-matched A/B vs GGUF: identity, wardrobe and spoken lines held;\nspeed unchanged. Prompt-sensitive edge cases exist (proper nouns) - eyeball outputs."
+        "## CHAINING (Motion Context) + LOW-RAM TEXT ENCODER\n\n**Chain clips (motion + audio continue across the cut).** Needs\n[ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context).\nAll four nodes here ship BYPASSED. Before rendering a clip you may want to continue,\nun-bypass Save Latent (~7 MB per clip under output/h3_context/) - a clip rendered without\nit cannot be continued later. To CONTINUE a clip: un-bypass Motion Context, Trim and\nLoad Latent as well, set Load Latent clip_index to the clip you continue FROM and Save\nLatent clip_index to the clip this one IS, queue. The continuation comes back exactly 22\nframes shorter (the pinned context, trimmed for clean concat). Validated on a 48GB M5:\n5s + 5s join r=0.95, the audio bed continues (small level swell). Resolution must match\nbetween chained clips. Motion Context refuses to run without a context latent wired.\n\n**Low-RAM text encoder (optional).** The bypassed ClipProj Loader swaps the 13.6 GB 32B\nGGUF encoder for Qwen3-VL-8B fp8 (+380 MB projection) ~= 3.7 GB lighter - this is what\nmakes 5s takes fit in 48 GB. Needs\n[ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) + matrices from\nHF NicoLab28/ClipProj-MiniMax-H3. To use: un-bypass and wire its CLIP output in place of\nthe GGUF loader. Seed-matched A/B vs GGUF: identity, wardrobe and spoken lines held;\nspeed unchanged. Prompt-sensitive edge cases exist (proper nouns) - eyeball outputs."
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -2688,7 +2688,7 @@
     },
     {
       "id": 9,
-      "title": "CHAINING + LOW-RAM ENCODER (optional, all bypassed except Save Latent)",
+      "title": "CHAINING + LOW-RAM ENCODER (optional, all bypassed)",
       "bounding": [
         3330,
         18,
