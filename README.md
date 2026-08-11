@@ -110,9 +110,13 @@ Both workflows ship a Motion Context block that continues a clip: motion carries
 cut, the scene holds, and so does the audio bed. Needs
 [ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context).
 
-Every render saves its latent, about 7 MB, under `output/h3_context/`. To continue one:
+Chaining needs a latent from the clip you are continuing. Un-bypass Save Latent and render the
+first clip; it writes about 7 MB under `output/h3_context/`. For the continuation, also
 un-bypass Motion Context, Trim and Load Latent, set Load Latent's `clip_index` to the clip you
 are continuing from and Save Latent's to this one, queue.
+
+All four ship bypassed, so the pack stays genuinely optional. The cost is that you have to
+decide a clip is continuable before you render it, not after.
 
 **The continuation comes back exactly 22 frames shorter.** Those are the pinned context frames
 and Trim removes them so the files concatenate cleanly. That length difference is the free

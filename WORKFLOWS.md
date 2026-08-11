@@ -52,19 +52,19 @@ MacMax does not do R2V. Carrying identity from reference stills needs
 
 **Chaining + low-RAM group**, from the optional packs:
 
-- `Motion Context Save Latent` is ACTIVE, so every render writes a ~7 MB latent and is
-  continuable later. `Motion Context`, `Trim` and `Load Latent` are bypassed; un-bypass all
-  three to continue a clip. Motion Context refuses to run with nothing to pin, so it cannot be
+- All four Motion Context nodes ship bypassed. Un-bypass `Save Latent` on a clip you may want
+  to continue; it writes a ~7 MB latent. To continue one, also un-bypass `Motion Context`,
+  `Trim` and `Load Latent`. Motion Context refuses to run with nothing to pin, so it cannot be
   left on by accident
 - `ClipProj Loader`, bypassed and unconnected. Un-bypass and wire its `CLIP` output where the
   GGUF loader's went
 
-Eleven nodes ship bypassed: two mode nodes, EasyCache, four export nodes, three chaining nodes
-and ClipProj. Enabling any is one click.
+Twelve nodes ship bypassed: two mode nodes, EasyCache, four export nodes, four chaining
+nodes and ClipProj. Enabling any is one click.
 
-API node counts once model paths are repointed: 21 as shipped, 22 with the first `LoadImage`,
-23 with both, 24 with chaining enabled, 25 with the export extras, plus one more in any state
-with EasyCache.
+API node counts once model paths are repointed: 20 as shipped, 21 with the first `LoadImage`,
+22 with both, 24 with all four chaining nodes enabled, 24 with the export extras, plus one more
+in any state with EasyCache.
 
 ## Foxydit port
 
@@ -92,8 +92,8 @@ This rig needs a second checkpoint. It ships with the ref2va DiT active
 fl2va one bypassed. Toggle the two UNETLoaders to switch paths.
 
 Same optional blocks as MacMax. Trim sits on the raw decode, ahead of the RIFE branch, so
-pinned frames come off before anything downstream sees them. API node counts: 29 as shipped,
-32 with chaining enabled.
+pinned frames come off before anything downstream sees them. API node counts: 28 as shipped,
+32 with all four chaining nodes enabled.
 
 **RIFE.** The original ships `RIFEInterpolation` active, but no version of
 ComfyUI-Frame-Interpolation registers that node type; it provides `RIFE VFI` with a different
@@ -120,7 +120,7 @@ Clean install, ComfyUI 0.30.0. Both workflows load, validate and render end to e
 shipped files, with the documented model-path repoints as the only edits.
 
 - MacMax: 608x1056, 24 fps, 5.167 s, h264 + AAC stereo, 31:48 total with Spectrum v0.2.3
-  enabled, zero fallbacks. Save Latent wrote a continuable latent on that stock render
+  enabled, zero fallbacks
 - Foxydit: rendered twice on the REF2VA path with one reference image, at 0.5 MP and at
   768x1376. Reference images do not ship, point Picture 1 at your own
 

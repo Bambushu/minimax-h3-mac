@@ -3853,7 +3853,7 @@
       ],
       "flags": {},
       "order": 57,
-      "mode": 0,
+      "mode": 4,
       "inputs": [
         {
           "localized_name": "latent",
