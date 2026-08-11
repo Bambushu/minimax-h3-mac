@@ -4,8 +4,8 @@ MiniMax H3 generates video with native stereo audio in one pass. It runs locally
 This is the config that worked, what each setting costs, and what didn't work.
 
 Measured on a 48 GB M5 Pro, ComfyUI 0.30.0, torch 2.13, over roughly 40 renders on
-2026-08-04 to 08-07. One machine, mostly one prompt. Treat the numbers as a strong prior,
-not a law.
+2026-08-04 to 08-07, plus about 20 more on 08-10 and 08-11 for the chaining and text-encoder
+sections. One machine, mostly one prompt. Treat the numbers as a strong prior, not a law.
 
 Two workflows ship here. See `WORKFLOWS.md` for which to use and what each one contains.
 
@@ -20,7 +20,9 @@ Four files, about 41 GB, relative to `ComfyUI/models/`.
 | `vae/` | [minimax_h3_video_vae_fp16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors) | 5.2 GB |
 | `vae/` | [minimax_h3_audio_vae_fp32.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors) | 0.6 GB |
 
-Use the GGUF text encoder. The stock NVFP4-AWQ one is CUDA only.
+Use the GGUF text encoder. The stock NVFP4-AWQ one is CUDA only. There is a lighter
+alternative that trades a little fidelity for about 3.7 GB, which is what makes 5s clips fit
+on 48 GB. See A smaller text encoder below.
 
 ## Setup
 
@@ -35,9 +37,16 @@ know). Custom nodes:
   without this pack the node will not resolve and the graph will not run. Delete the node
   and reconnect sigma shift to the sampler if you would rather not add it
 
+Two more packs are optional. Every node they add ships bypassed, so neither is needed to
+render, and without them those nodes show red while staying inert:
+
+- ComfyUI-H3-Motion-Context, for chaining clips
+- ComfyUI-ClipProj, for the smaller text encoder
+
 `ResolutionSelector` is ComfyUI core (`comfy_extras/nodes_resolution.py`).
-`./install_node_packs.sh macmax` clones all three and pins gguf. The Foxydit port needs more; run it
-with `foxydit` or `all`.
+`./install_node_packs.sh macmax` clones the three required packs and pins gguf. The Foxydit
+port needs more; run it with `foxydit`. The two optional packs are under `extras`, and `all`
+installs everything.
 
 ```bash
 ASFP8_INT8_EXT=1 python main.py --port 8288 \
@@ -287,3 +296,11 @@ One machine, one model config. The cost table will not transfer directly. The pr
 protocol and several correlations rest largely on one prompt. No metric here evaluates audio
 beyond whether Whisper recovered the words. The 2K upscaler and prompt-expander are not
 open-sourced.
+
+The chaining numbers are one join measured properly and one nine-link sequence watched
+end to end, all at 5s and 544x960. Longer links are reported elsewhere to fall apart around
+15s, where the fixed 22 pinned frames stop being a large enough share of the clip, but that
+was not measured here. The audio observation is that a rain bed and a kitchen bed both
+carried across a cut with a level swell; a tonal or musical build across a join was not
+tested and is likelier to show the seam. The text-encoder comparison is five renders, two of
+them same-seed against the encoder they replace.
