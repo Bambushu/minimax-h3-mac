@@ -21,8 +21,8 @@ Use the GGUF text encoder. The stock NVFP4-AWQ one is CUDA only.
 
 ## Setup
 
-ComfyUI 0.30.0 in its own checkout and venv. Stay on 0.30.0: a later update breaks the
-Spectrum node and degrades MiniMax audio.
+ComfyUI 0.30.0 in its own checkout and venv. Stay on 0.30.0: the Spectrum author reports a
+later update breaking their node and degrading MiniMax audio. Not verified here.
 
 Required node packs:
 
@@ -47,8 +47,9 @@ ASFP8_INT8_EXT=1 python main.py --port 8288 \
 H3 loads three models in sequence and never needs two at once, hence the memory flags.
 
 Take one commit on top of 0.30.0: [PR #15446](https://github.com/Comfy-Org/ComfyUI/pull/15446)
-streams the VAE in temporal chunks, peak VRAM down 58% encode / 83% decode at identical
-output. `git cherry-pick -x 2a68ce3`.
+streams the VAE in temporal chunks. Upstream measured peak VRAM down 58% encode / 83% decode
+at identical output; not separately benchmarked here, but it was in place for the times below.
+`git cherry-pick -x 2a68ce3`.
 
 48 GB is the tested floor. 32 GB is untested and expected to be tight.
 
@@ -80,8 +81,9 @@ Length is superlinear past that: at 4 steps, 5s took 27 min and 8s took 89 min. 
 untested.
 
 Previz at the **final** resolution, 10-12 steps. Dropping resolution saves 16-24% and changes
-the composition entirely (layout correlation 0.26-0.36 across a 2x area change, against 0.83
-for a step change at fixed resolution). Below 6 steps speech breaks before the picture does.
+the composition entirely: layout correlation 0.26-0.36 across a 2x area change, against 0.83
+for a step change at fixed resolution. Measured at 0.2-0.4 MP on one prompt, so treat it as a
+prior. Below 6 steps speech breaks before the picture does.
 
 ## Settings
 
