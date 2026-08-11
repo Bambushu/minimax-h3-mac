@@ -93,6 +93,20 @@ because 3:29 of its 47.4 minutes is fixed overhead.
 
 Keyframe conditioning costs about 17.6% per step.
 
+The tables above are the uncached baseline on the original stack. For reference, what the
+v1.1 stack does at 0.5 MP vertical, 20 steps, with Spectrum on, the lighter text encoder and
+the chunked VAE:
+
+| shot | wall |
+|---|---|
+| 3s image to video | ~14 min |
+| 5s text to video | ~24 min |
+| 3s reference to video, with a spoken line | ~29 min |
+| 5s reference to video, chained link | ~39 min |
+
+References cost more than duration does: a 3s render carrying two reference images is slower
+than a 5s one carrying none. Budget by megapixels times seconds times references.
+
 ## Cost is a token budget
 
 Tokens scale with megapixels times seconds. Resolution and duration are not separate limits.
@@ -202,41 +216,35 @@ across the cut, the scene holds, and so does the audio bed. It needs one more pa
 
 Every render now saves its latent, about 7 MB, under `output/h3_context/`. To continue one,
 un-bypass Motion Context, Trim and Load Latent, set Load Latent's `clip_index` to the clip
-you are continuing from and Save Latent's to the clip this one is, and queue. The
-continuation comes back exactly 22 frames shorter, because those frames are the pinned
-context and Trim removes them so the two files concatenate cleanly. That length difference is
-the free proof the pack engaged, and it is the first thing to check.
+you are continuing from and Save Latent's to the clip this one is, and queue.
 
-Measured on two 5s clips at 544x960:
+**The continuation comes back exactly 22 frames shorter.** Those frames are the pinned
+context and Trim removes them so the two files concatenate cleanly. It is the free proof the
+pack engaged, and the first thing to check.
 
-| check | result |
-|---|---|
-| frames, clip A then clip B | 124 then 102, exactly 22 fewer |
-| join correlation, A's last frame against B's first | 0.954 |
-| join frame difference | +1.1 sigma against the two clips' own internal motion |
-| audio | the rain bed continues across the cut, with about a 6.5 dB level swell |
-
-Nine links then ran unattended as one reference-to-video sequence, 39s of continuous kitchen
-scene at about 31 to 40 min per link. `samples/sample_MotionContext_chain_25s.mp4` is the
-first 25s of it, hard concatenated with no crossfades and no level matching, so every join is
-visible exactly as rendered.
+On two 5s clips at 544x960 the join measured as continuous: correlation 0.95, and the frame
+difference across the cut sat inside the range of the clips' own internal motion rather than
+above it. The audio bed carried across, a little louder on the far side. Nine links then ran
+as one sequence, 39s of continuous scene, around 40 min per link with two reference images on
+each.
+`samples/sample_MotionContext_chain_25s.mp4` is the first 25s, hard concatenated with no
+crossfades and no level matching, so every join is visible as rendered.
 
 Three things that cost renders here.
 
 **Write each beat to fill the whole clip.** If the action finishes early, the model can fill
 the remaining frames by cutting to an animated version of one of your reference images. That
-happened twice on the same beat, on two different seeds, with a reference selfie appearing
-inside the kitchen. Rewriting the beat so the pose holds through the take fixed it. Reseeding
-alone did not.
+happened twice on the same beat, on two seeds, with a reference selfie appearing inside the
+kitchen. Rewriting the beat so the pose holds through the take fixed it. Reseeding did not.
 
 **The first clip's framing is inherited by everything after it.** A wide, drifting frame in
-clip 1 propagated through all nine. Lock the framing you want before starting a chain.
+clip 1 propagated through all nine. Lock the framing before starting a chain.
 
 **Resolution has to match between chained clips**, since a latent cannot be resized. The node
 refuses and names both resolutions rather than quietly falling back to something lossy.
 
 The pack also accepts the previous clip's decoded pixels through `context_frames` instead of
-its latent. That path works but pays a lossy round trip on both streams. Use the latent.
+its latent. That works but pays a lossy round trip on both streams. Use the latent.
 
 ## A smaller text encoder
 
@@ -246,15 +254,14 @@ CPU. Needs [ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) and
 from [NicoLab28/ClipProj-MiniMax-H3](https://huggingface.co/NicoLab28/ClipProj-MiniMax-H3).
 Un-bypass it and wire its `CLIP` output where the GGUF loader's went.
 
-What it buys is length, not speed. Three 5s text-to-video renders completed at 23 to 25 min
-each, a length that did not fit before on 48 GB. Two same-seed reruns of GGUF renders, one
-reference-to-video take with a spoken line and one image-to-video continuation, came back
-with identity, wardrobe, scene and the verbatim line intact, at 29.0 min against 29.2 and
-13.8 against 13.1. Sampling dominates the clock, so a lighter encoder does not make it
-faster.
+What it buys is length, not speed. Three 5s text-to-video renders came in around 24 min each,
+a length that did not fit before on 48 GB. Two same-seed reruns of GGUF renders, one
+reference-to-video take with a spoken line and one image-to-video continuation, held identity,
+wardrobe, scene and the verbatim line, at the same wall clock to within a minute. Sampling
+dominates, so a lighter encoder does not make anything faster.
 
-The projection is an approximation of the full encoder, best measured cosine similarity 0.80,
-and the author reports proper nouns as a known weak spot. One report elsewhere describes
+The projection is an approximation of the full encoder, and the author reports proper nouns as
+a known weak spot. One report elsewhere describes
 prompt drift on a talking head; that did not reproduce in the five renders here. Eyeball the
 output before trusting it on a job.
 
@@ -297,10 +304,9 @@ protocol and several correlations rest largely on one prompt. No metric here eva
 beyond whether Whisper recovered the words. The 2K upscaler and prompt-expander are not
 open-sourced.
 
-The chaining numbers are one join measured properly and one nine-link sequence watched
-end to end, all at 5s and 544x960. Longer links are reported elsewhere to fall apart around
-15s, where the fixed 22 pinned frames stop being a large enough share of the clip, but that
-was not measured here. The audio observation is that a rain bed and a kitchen bed both
-carried across a cut with a level swell; a tonal or musical build across a join was not
-tested and is likelier to show the seam. The text-encoder comparison is five renders, two of
-them same-seed against the encoder they replace.
+The chaining numbers are one join measured properly and one nine-link sequence watched end to
+end, all at 5s. Longer links are reported elsewhere to fall apart around 15s, where the fixed
+22 pinned frames stop being a large enough share of the clip; not tested here. Audio carried
+across a cut on two ambience beds, but a musical build across a join is likelier to show the
+seam and was not tested. The text-encoder comparison is five renders, two of them same-seed
+against the encoder they replace.

@@ -1864,8 +1864,8 @@
       "id": 129,
       "type": "MiniMaxH3MotionContext",
       "pos": [
-        -500,
-        900
+        3350,
+        180
       ],
       "size": [
         284.392578125,
@@ -1970,8 +1970,8 @@
       "id": 130,
       "type": "MiniMaxH3MotionContextTrim",
       "pos": [
-        -250,
-        900
+        3350,
+        420
       ],
       "size": [
         270,
@@ -2059,8 +2059,8 @@
       "id": 131,
       "type": "MiniMaxH3MotionContextSaveLatent",
       "pos": [
-        0,
-        900
+        3350,
+        580
       ],
       "size": [
         305.6890625,
@@ -2115,8 +2115,8 @@
       "id": 132,
       "type": "MiniMaxH3MotionContextLoadLatent",
       "pos": [
-        -750,
-        900
+        3350,
+        60
       ],
       "size": [
         306.1744140625,
@@ -2167,8 +2167,8 @@
       "id": 133,
       "type": "ClipProjLoader",
       "pos": [
-        -1100,
-        900
+        3350,
+        700
       ],
       "size": [
         279.5005859375,
@@ -2247,12 +2247,12 @@
       "id": 134,
       "type": "MarkdownNote",
       "pos": [
-        -1100,
-        1150
+        3350,
+        890
       ],
       "size": [
         620,
-        420
+        270
       ],
       "flags": {},
       "order": 15,
@@ -2684,6 +2684,19 @@
         480
       ],
       "color": "#2a6b3f",
+      "flags": {}
+    },
+    {
+      "id": 9,
+      "title": "CHAINING + LOW-RAM ENCODER (optional, all bypassed except Save Latent)",
+      "bounding": [
+        3330,
+        18,
+        660,
+        1160
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
       "flags": {}
     }
   ],

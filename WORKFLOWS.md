@@ -59,7 +59,8 @@ All ComfyUI core, so they add nothing to the three-pack requirement.
   switch to landscape, in which case set it yourself.
 - `SaveAudio`, bypassed. The audio stem on its own for editing.
 
-Two more blocks sit below the graph, both from optional packs:
+Two more blocks sit in their own group at the right end of the graph, `CHAINING + LOW-RAM
+ENCODER`, both from optional packs:
 
 - Chaining. `Motion Context Save Latent` is ACTIVE, so every render writes its latent, about
   7 MB, and is continuable later. `Motion Context`, `Motion Context Trim` and
@@ -73,10 +74,11 @@ Eleven nodes ship bypassed: the two mode nodes, EasyCache, the four export nodes
 chaining nodes and ClipProj. Everything else is active. Enabling any of them is one click.
 
 Verified in ComfyUI: 32 functional nodes and 4 notes, no missing node types, no console
-errors, no overlapping nodes, every functional node inside a group (the notes sit
+errors, no overlapping nodes, every functional node inside a group (the three header notes sit
 above the graph as a header row, deliberately outside).
 
-MacMax has been rendered end to end from this exact file. See the table below.
+MacMax has been rendered end to end from this exact v1.1 file, which also confirmed that Save
+Latent writes a continuable latent on a stock render with the shipped path.
 
 API node counts once the model paths are repointed: 21 as shipped (Spectrum on, EasyCache
 off, Save Latent on), 22 with the first `LoadImage` enabled, 23 with both, 25 with the four
