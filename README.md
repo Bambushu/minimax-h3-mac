@@ -51,7 +51,8 @@ streams the VAE in temporal chunks. Upstream measured peak VRAM down 58% encode 
 at identical output; not separately benchmarked here, but it was in place for the times below.
 `git cherry-pick -x 2a68ce3`.
 
-48 GB is the tested floor. 32 GB is untested and expected to be tight.
+48 GB is what everything here was measured on. 32 GB works too, reported by users rather than
+tested here; expect to stay at the shorter durations.
 
 ## Render times
 
