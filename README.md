@@ -151,8 +151,19 @@ Un-bypass and wire its `CLIP` output where the GGUF loader's went.
 same-seed reruns against the GGUF encoder held identity, wardrobe, scene and a verbatim spoken
 line at the same wall clock. Sampling dominates either way.
 
-The projection is an approximation; the author reports proper nouns as a weak spot. Eyeball
-output before trusting it on a job.
+**The projection is an approximation, and proper nouns are where it shows.** Measured on one
+same-seed, same-prompt pair, the only difference being the encoder:
+
+```
+ClipProj : "Any camera is fine, Apple, Andrian or your dakes top at home."
+GGUF     : "Any camera is fine, Apple, Android, or your desktop at home."
+```
+
+So keep the GGUF loader for any line carrying brand names, proper nouns or technical terms, and
+reach for ClipProj when you need the length. **The GGUF encoder is also lighter in practice than
+its file size suggests** — ComfyUI frees it once the prompt is encoded, so wired memory during
+sampling sits at the DiT plus VAEs (measured 21-24 GB at 0.6 MP). ClipProj ships `mode: resident`,
+which pins its weights for the whole render; `streaming` or `dynamic` make them pageable.
 
 ## Limits
 
