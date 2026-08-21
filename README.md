@@ -1,6 +1,7 @@
-# MiniMax H3 on Apple Silicon
+# MacMax Turbo
 
-MiniMax H3 generates video with native stereo audio in one pass. This runs it locally on a Mac.
+**v1.2** — MiniMax H3 generates video with native stereo audio in one pass. This runs it locally
+on a Mac, now with an optional turbo-LoRA fast path (see [Turbo LoRA](#turbo-lora)).
 
 Two workflows. See `WORKFLOWS.md` for which to use.
 
