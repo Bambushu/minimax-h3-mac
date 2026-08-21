@@ -3,7 +3,7 @@
 **v1.2** — MiniMax H3 generates video with native stereo audio in one pass. This runs it locally
 on a Mac, now with an optional turbo-LoRA fast path (see [Turbo LoRA](#turbo-lora)).
 
-Two workflows. See `WORKFLOWS.md` for which to use.
+One graph — text-to-video, image-to-video, first/last frame — each with native audio.
 
 Measured on a 48 GB M5 Pro, ComfyUI 0.30.0, torch 2.13.
 
@@ -37,8 +37,7 @@ Optional, both ship bypassed:
 - **ComfyUI-H3-Motion-Context** - chaining
 - **ComfyUI-ClipProj** - smaller text encoder
 
-`./install_node_packs.sh macmax` clones the required three. `foxydit` adds the port's extras,
-`extras` the optional two, `all` everything.
+`./install_node_packs.sh macmax` clones the required three. `extras` adds the optional two.
 
 ```bash
 ASFP8_INT8_EXT=1 python main.py --port 8288 \
@@ -63,11 +62,10 @@ tested here; expect to stay at the shorter durations.
 |---|---|
 | 3s image to video | ~14 min |
 | 5s text to video | ~24 min |
-| 3s reference to video, with a spoken line | ~29 min |
-| 5s reference to video, chained link | ~39 min |
+| 5s image to video, chained link | ~39 min |
 
-**References cost more than duration.** A 3s render carrying two reference images is slower
-than a 5s one carrying none. Budget by megapixels x seconds x references.
+Cost tracks megapixels x seconds. A first-frame image adds little; duration and resolution are
+the levers.
 
 ## Sizing
 
@@ -103,7 +101,7 @@ from a fitted curve. That is why fast-changing detail like a mouth survives one 
 other. Sharpness metrics *reward* EasyCache because it injects high-frequency edge noise, so
 judge a cache on a full-size face, not a number.
 
-Both workflows ship sampler `euler`, not the stock templates' `res_multistep`. Scheduler stays
+The workflow ships sampler `euler`, not the stock templates' `res_multistep`. Scheduler stays
 `simple`.
 
 ## Turbo LoRA
@@ -111,15 +109,14 @@ Both workflows ship sampler `euler`, not the stock templates' `res_multistep`. S
 lightx2v distills the sampler into far fewer steps. Their **4-step v1.1** LoRA
 (`minimax_h3_fl2v_turbo_4step_v1.1_768p_comfyui_bf16.safetensors`, the `_comfyui_bf16` variant,
 2.0 GB, from [lightx2v/Minimax-h3-Turbo](https://huggingface.co/lightx2v/Minimax-h3-Turbo)) is the
-fast path. It is trained on FL2VA (text- and image-to-video) but patches the REF2VA reference model
-too, cleanly, with no missing keys.
+fast path — trained on FL2VA, the text-, image- and first/last-frame modes this graph runs. It
+patches the GGUF DiT cleanly, with no missing keys.
 
 **It needs a GGUF DiT.** The int8 checkpoint in the Models table has no cheap LoRA patch path: a
 bf16 LoRA forces it toward full precision and OOMs. Swap the diffusion model for the pruned GGUF
 ([MiniMax-H3-FL2VA-Pruned-Q5_K_M.gguf](https://huggingface.co/Abiray/MiniMax-H3-Pruned-GGUF),
-14 GB; the REF2VA GGUF sits beside it for reference-to-video), load it through **ComfyUI-GGUF**'s
-`Unet Loader (GGUF)`, then insert a `LoraLoaderModelOnly` at strength 1.0 between that loader and
-the sampler.
+14 GB), load it through **ComfyUI-GGUF**'s `Unet Loader (GGUF)`, then insert a
+`LoraLoaderModelOnly` at strength 1.0 between that loader and the sampler.
 
 Two step counts, one per lane:
 
@@ -138,7 +135,7 @@ is for volume and previz, not the hero render.
 
 ## Chaining
 
-Both workflows ship a Motion Context block that continues a clip: motion carries across the
+The workflow ships a Motion Context block that continues a clip: motion carries across the
 cut, the scene holds, and so does the audio bed. Needs
 [ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context).
 
@@ -172,7 +169,7 @@ both streams. Use the latent.
 
 ## Smaller text encoder
 
-Both workflows carry a bypassed `ClipProj Loader`. It swaps the 14.6 GB GGUF encoder for
+The workflow carries a bypassed `ClipProj Loader`. It swaps the 14.6 GB GGUF encoder for
 Qwen3-VL-8B fp8 plus a 380 MB projection matrix, about 3.7 GB lighter, encoding on CPU. Needs
 [ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) and a matrix from
 [NicoLab28/ClipProj-MiniMax-H3](https://huggingface.co/NicoLab28/ClipProj-MiniMax-H3).
