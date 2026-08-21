@@ -105,6 +105,36 @@ judge a cache on a full-size face, not a number.
 Both workflows ship sampler `euler`, not the stock templates' `res_multistep`. Scheduler stays
 `simple`.
 
+## Turbo LoRA
+
+lightx2v distills the sampler into far fewer steps. Their **4-step v1.1** LoRA
+(`minimax_h3_fl2v_turbo_4step_v1.1_768p_comfyui_bf16.safetensors`, the `_comfyui_bf16` variant,
+2.0 GB, from [lightx2v/Minimax-h3-Turbo](https://huggingface.co/lightx2v/Minimax-h3-Turbo)) is the
+fast path. It is trained on FL2VA (text- and image-to-video) but patches the REF2VA reference model
+too, cleanly, with no missing keys.
+
+**It needs a GGUF DiT.** The int8 checkpoint in the Models table has no cheap LoRA patch path: a
+bf16 LoRA forces it toward full precision and OOMs. Swap the diffusion model for the pruned GGUF
+([MiniMax-H3-FL2VA-Pruned-Q5_K_M.gguf](https://huggingface.co/Abiray/MiniMax-H3-Pruned-GGUF),
+14 GB; the REF2VA GGUF sits beside it for reference-to-video), load it through **ComfyUI-GGUF**'s
+`Unet Loader (GGUF)`, then insert a `LoraLoaderModelOnly` at strength 1.0 between that loader and
+the sampler.
+
+Two step counts, one per lane:
+
+| lane | steps | why |
+|---|---|---|
+| **silent b-roll** | **4** | the LoRA's design point. About 1.8x faster than the older 8-step LoRA run at 8 steps, and slightly sharper. More steps buy nothing here: 4, 6 and 8 are a flat plateau. |
+| **anything with audio** (speech, foley, ambience) | **6** | 4-step audio is faintly tinny; 6 cleans it and the picture holds. |
+
+Measured on the 48 GB M5, 0.6 MP, ClipProj encoder: 3s silent at 4 steps ran ~7 min against ~12 for
+the 8-step LoRA at 8 steps; 4s spoken at 6 steps ran ~10 min. Whisper recovered the words verbatim
+at every step count from 6 up — **the tinniness at 4 steps is audible, not transcribable**, the same
+caveat as everywhere else here: audio is judged by ear, not a metric.
+
+The base int8 path at 20-25 steps stays the quality lane; its scene detail is visibly finer. Turbo
+is for volume and previz, not the hero render.
+
 ## Chaining
 
 Both workflows ship a Motion Context block that continues a clip: motion carries across the
