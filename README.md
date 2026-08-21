@@ -56,13 +56,21 @@ tested here; expect to stay at the shorter durations.
 
 ## Render times
 
-0.5 MP vertical, 20 steps, Spectrum on, chunked VAE, ClipProj encoder.
+Base int8 path, 0.5 MP vertical, Spectrum on, chunked VAE, ClipProj encoder.
 
-| shot | wall |
-|---|---|
-| 3s image to video | ~14 min |
-| 5s text to video | ~24 min |
-| 5s image to video, chained link | ~39 min |
+| shot | steps | wall |
+|---|---|---|
+| 3s image to video | 20 | ~14 min |
+| 5s text to video | 20 | ~24 min |
+| 5s image to video, chained link | 20 | ~39 min |
+
+On the [Turbo LoRA](#turbo-lora) GGUF path, 0.6 MP, the step count drops to one of two per lane
+(4 silent, 6 with audio) and so does the clock:
+
+| shot | steps | wall |
+|---|---|---|
+| 3s silent | 4 | ~7 min |
+| 4s spoken | 6 | ~11 min |
 
 Cost tracks megapixels x seconds. A first-frame image adds little; duration and resolution are
 the levers.
@@ -83,7 +91,8 @@ untested.
 Previz at the **final** resolution, 10-12 steps. Dropping resolution saves 16-24% and changes
 the composition entirely: layout correlation 0.26-0.36 across a 2x area change, against 0.83
 for a step change at fixed resolution. Measured at 0.2-0.4 MP on one prompt, so treat it as a
-prior. Below 6 steps speech breaks before the picture does.
+prior. On the base path, below 6 steps speech breaks before the picture does; the turbo LoRA
+shifts that floor down (4 silent, 6 with audio, see [Turbo LoRA](#turbo-lora)).
 
 ## Settings
 
@@ -91,7 +100,7 @@ prior. Below 6 steps speech breaks before the picture does.
 |---|---|
 | **Spectrum, degree 1** | **ships ON.** -27% wall, faces hold |
 | EasyCache 0.2 | -34% but smears mouths and teeth. Ships bypassed, fine for faceless b-roll. Never alongside Spectrum |
-| steps | 20. 15 costs real layout for -25% |
+| steps | base path 20 (15 costs real layout for -25%); turbo path 4 silent / 6 with audio |
 | `history_storage` | `system_ram`. On unified memory `vram` buys nothing (22.2 vs 21.9 min, bit-identical) |
 | ASFP8 int8 kernel, mtlflashattn | no measurable gain on H3 shapes |
 | SageAttention, Sol-Attn | CUDA only |
