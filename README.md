@@ -18,7 +18,10 @@ Four files, about 41 GB, relative to `ComfyUI/models/`.
 | `vae/` | [minimax_h3_video_vae_fp16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors) | 5.2 GB |
 | `vae/` | [minimax_h3_audio_vae_fp32.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors) | 0.6 GB |
 
-Use the GGUF text encoder. The stock NVFP4-AWQ one is CUDA only.
+Use the GGUF text encoder. It is the safe default: the stock NVFP4-AWQ encoder died on the
+block-scale dequant with AppleSilicon-FP8 1.1. With **AppleSilicon-FP8 1.3.2+** the NVFP4-AWQ and
+the Comfy-Org `qwen3vl_32b_minimax_h3_int8_convrot` text encoders are reported to load as well
+([#1](https://github.com/Bambushu/minimax-h3-mac/issues/1)) - not verified here yet.
 
 ## Setup
 
