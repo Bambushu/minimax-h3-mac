@@ -1,13 +1,14 @@
 #!/bin/zsh
-# Custom node packs for the three MiniMax H3 Apple Silicon workflows.
+# Custom node packs for the MiniMax H3 Apple Silicon workflows.
 #
 #   MacMax   needs 3 packs: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8, ComfyUI-Spectrum-MiniMax-H3.
 #   Foxydit  needs those 3 plus 5 more.
+#   v20      needs the Foxydit set plus comfyui-obvpm (its reference-image loader).
 #
 # ResolutionSelector is ComfyUI CORE (comfy_extras/nodes_resolution.py). No Resolution-Master
 # or KJNodes pack is needed for it.
 #
-# Pass a target: ./install_node_packs.sh macmax | foxydit | extras | all   (default: all)
+# Pass a target: ./install_node_packs.sh macmax | foxydit | v20 | extras | all  (default: all)
 #
 # DO NOT RUN THIS WHILE A RENDER IS IN FLIGHT. It writes into the venv and the custom_nodes
 # dir, and a half-installed pack breaks ComfyUI on next start.
@@ -34,13 +35,13 @@ PACKS+=(ComfyUI-GGUF ComfyUI-AppleSilicon-FP8)
 # ComfyUI-GGUF reports IMPORT FAILED without this exact version
 $PY -m pip install -q "gguf==0.18.0" || echo "  WARN: gguf==0.18.0 failed to install"
 
-# Spectrum: BOTH workflows now ship it ENABLED. It forecasts skipped sampling steps from a
+# Spectrum: the current MacMax and derived v20 workflow ship it ENABLED. It forecasts skipped sampling steps from a
 # fitted curve instead of reusing a cached state, so fast-changing detail like a mouth
 # survives. Measured on MPS at 0.6 MP/5s/20 steps, same seed: 34:27 vs 47:21 uncached (-27%),
 # 8 of 20 steps forecast, faces intact. EasyCache is faster (31:16) but visibly smears mouths
 # and teeth, so it ships BYPASSED in both. Never enable both at once.
 # PINNED to v0.2.3 (was v0.1.5). We originally pinned v0.1.5 believing later Spectrum needed
-# a newer ComfyUI. That is NOT true of v0.2.3: it has run 28 times on this same ComfyUI 0.30.0
+# a newer ComfyUI. That is NOT true of v0.2.3: it ran 28 times on the earlier ComfyUI 0.30.0
 # with zero fallbacks. The pin moved because v0.1.5 has a real defect for anyone using this
 # pack -- both workflows ship Spectrum ENABLED, and v0.1.5 uses ONE shared blend weight for
 # both modalities. H3 packs audio and video into a single transformer sequence, so a forecast
@@ -52,7 +53,7 @@ clone https://github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3.git
 ( cd $CN/ComfyUI-Spectrum-MiniMax-H3 && git fetch -q --depth 1 origin tag v0.2.3 2>/dev/null && git -c advice.detachedHead=false checkout -q v0.2.3 || echo "  WARN: could not pin Spectrum v0.2.3, using cloned HEAD" )
 PACKS+=(ComfyUI-Spectrum-MiniMax-H3)
 
-if [[ $TARGET == foxydit || $TARGET == all ]]; then
+if [[ $TARGET == foxydit || $TARGET == v20 || $TARGET == all ]]; then
   # --- FOXYDIT (filmmaking rig) -------------------------------------------------------
   clone https://github.com/rgthree/rgthree-comfy.git
   clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git
@@ -62,6 +63,15 @@ if [[ $TARGET == foxydit || $TARGET == all ]]; then
   # Spectrum is installed above, for every target.
   PACKS+=(rgthree-comfy ComfyUI-VideoHelperSuite ComfyUI-Easy-Use ComfyUI-KJNodes
           ComfyUI-Frame-Interpolation)
+fi
+
+if [[ $TARGET == v20 || $TARGET == all ]]; then
+  # --- v20 ONLY ------------------------------------------------------------------------
+  # LoadImageCrop, the four <Picture N> reference loaders. Unlike the other unresolved node
+  # types in v20 this one is ACTIVE, so without this pack the workflow will not render at all.
+  # It is not in the ComfyUI-Manager registry, which is why it is cloned by URL here.
+  clone https://github.com/obvpm/comfyui-obvpm.git
+  PACKS+=(comfyui-obvpm)
 fi
 
 if [[ $TARGET == extras || $TARGET == all ]]; then
@@ -91,9 +101,25 @@ cat <<'EOF'
 Done. Restart ComfyUI with:
   ASFP8_INT8_EXT=1 python main.py --port 8288 --reserve-vram 10 --cache-none --disable-smart-memory
 
-Then load a workflow. On first load the model loaders may show red: these files use bare
-stock filenames, so if your models live in subfolders you re-pick them once. That is expected.
+Then load a workflow. `MacMax_H3_R2V_CURRENT.json`, installed by `build_mac_v20.py --install`,
+already uses this Mac's `_h3/` model paths. Public workflow files use bare stock filenames, so
+re-pick their loaders once if your models live in subfolders.
 
 These node types stay unresolved on Apple Silicon and ship BYPASSED on purpose. Do not enable
 them: SolAttnPatch, MiniMaxH3MemoryEfficientSageAttentionPatch, RIFEInterpolation, LoadAudioUI.
+
+v20's "Temporal Upsample Pass" group needs ComfyUI-MAINodes (github.com/matlowai/ComfyUI-MAINodes).
+It ships BYPASSED so the workflow renders without it; install it only if you want that group.
+
+The generated v20 Mac port leaves all four LoadImageCrop reference loaders bypassed. Re-point and
+enable one or more before R2V. This avoids validating the author's private filenames on first load.
+
+v20 additionally needs ComfyUI 0.32.0 or newer for ModelAttentionBackend, which is an ACTIVE
+node. 0.32.0 also calls comfy_kitchen.int8_attention_is_available(), so upgrade the package
+alongside it or ComfyUI will not boot:
+
+  python -m pip install -U 'comfy-kitchen>=0.2.31'
+
+'Fast Groups Bypasser (rgthree)' is a FRONTEND-only node. It never appears in /object_info and
+is not a missing dependency, whatever a graph checker tells you.
 EOF

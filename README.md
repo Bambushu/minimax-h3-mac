@@ -1,4 +1,8 @@
-# MacMax Turbo
+# MacMax Turbo — legacy simple-workflow measurements
+
+> This file records the older T2V/I2V/FLF experiments and remains useful as benchmark history.
+> It is not the current R2V recipe. Start with `MacMax_H3_R2V_CURRENT.json` and the v20 section
+> of `WORKFLOWS.md`; the active local checkout is ComfyUI 0.32.0.
 
 **v1.2** — MiniMax H3 generates video with native stereo audio in one pass. This runs it locally
 on a Mac, now with an optional turbo-LoRA fast path (see [Turbo LoRA](#turbo-lora)).
@@ -64,8 +68,9 @@ Base int8 path, 0.5 MP vertical, Spectrum on, chunked VAE, ClipProj encoder.
 | 5s text to video | 20 | ~24 min |
 | 5s image to video, chained link | 20 | ~39 min |
 
-On the [Turbo LoRA](#turbo-lora) GGUF path, 0.6 MP, the step count drops to one of two per lane
-(4 silent, 6 with audio) and so does the clock:
+On a turbo GGUF path, 0.6 MP, the step count drops and so does the clock. The numbers below are
+the historical lightx2v 4/6-step measurements; the current turbo LoRA is Parasyte at 8 steps (see
+[Turbo LoRA](#turbo-lora)):
 
 | shot | steps | wall |
 |---|---|---|
@@ -91,8 +96,9 @@ untested.
 Previz at the **final** resolution, 10-12 steps. Dropping resolution saves 16-24% and changes
 the composition entirely: layout correlation 0.26-0.36 across a 2x area change, against 0.83
 for a step change at fixed resolution. Measured at 0.2-0.4 MP on one prompt, so treat it as a
-prior. On the base path, below 6 steps speech breaks before the picture does; the turbo LoRA
-shifts that floor down (4 silent, 6 with audio, see [Turbo LoRA](#turbo-lora)).
+prior. On the base path, below 6 steps speech breaks before the picture does; a turbo LoRA
+shifts that floor down (Parasyte runs at 8; the old lightx2v ran 4 silent / 6 with audio, see
+[Turbo LoRA](#turbo-lora)).
 
 ## Settings
 
@@ -100,7 +106,7 @@ shifts that floor down (4 silent, 6 with audio, see [Turbo LoRA](#turbo-lora)).
 |---|---|
 | **Spectrum, degree 1** | **ships ON.** -27% wall, faces hold |
 | EasyCache 0.2 | -34% but smears mouths and teeth. Ships bypassed, fine for faceless b-roll. Never alongside Spectrum |
-| steps | base path 20 (15 costs real layout for -25%); turbo path 4 silent / 6 with audio |
+| steps | base path 20 (15 costs real layout for -25%); Parasyte turbo path 8 (old lightx2v was 4 silent / 6 with audio) |
 | `history_storage` | `system_ram`. On unified memory `vram` buys nothing (22.2 vs 21.9 min, bit-identical) |
 | ASFP8 int8 kernel, mtlflashattn | no measurable gain on H3 shapes |
 | SageAttention, Sol-Attn | CUDA only |
@@ -115,32 +121,34 @@ The workflow ships sampler `euler`, not the stock templates' `res_multistep`. Sc
 
 ## Turbo LoRA
 
-lightx2v distills the sampler into far fewer steps. Their **4-step v1.1** LoRA
-(`minimax_h3_fl2v_turbo_4step_v1.1_768p_comfyui_bf16.safetensors`, the `_comfyui_bf16` variant,
-2.0 GB, from [lightx2v/Minimax-h3-Turbo](https://huggingface.co/lightx2v/Minimax-h3-Turbo)) is the
-fast path — trained on FL2VA, the text-, image- and first/last-frame modes this graph runs. It
-patches the GGUF DiT cleanly, with no missing keys.
+The current turbo LoRA is **PlagueKind "Parasyte"** (`H3-PK-Parasyte-Turbo.safetensors`, 2.1 GB),
+which needs **ComfyUI-PlagueKind-Nodes**. It replaced the lightx2v LoRAs on this Mac after an A/B
+at the same seed, prompt and size (2026-09-03): a clean win over the lightx2v 8-step run at 8 steps.
+The R2V workflow runs it through the rgthree **Power Lora Loader** at **strength 1.0**, sampler
+**`er_sde`**, scheduler **`beta`**, **8 steps**. The scripted speed lane (`h3_local_turbo.py`) uses
+strength 1.5 with shift 12/3 and `GCN_ADALN=strip` — Parasyte is a dense full-base LoRA, and `strip`
+drops the 51 `adaln_proj` keys the pruned GGUF DiT lacks (~0.02% of modulation, author-measured), so
+the log stays clean and output is unchanged.
 
 **It needs a GGUF DiT.** The int8 checkpoint in the Models table has no cheap LoRA patch path: a
 bf16 LoRA forces it toward full precision and OOMs. Swap the diffusion model for the pruned GGUF
 ([MiniMax-H3-FL2VA-Pruned-Q5_K_M.gguf](https://huggingface.co/Abiray/MiniMax-H3-Pruned-GGUF),
-14 GB), load it through **ComfyUI-GGUF**'s `Unet Loader (GGUF)`, then insert a
-`LoraLoaderModelOnly` at strength 1.0 between that loader and the sampler.
-
-Two step counts, one per lane:
-
-| lane | steps | why |
-|---|---|---|
-| **silent b-roll** | **4** | the LoRA's design point. About 1.8x faster than the older 8-step LoRA run at 8 steps, and slightly sharper. More steps buy nothing here: 4, 6 and 8 are a flat plateau. |
-| **anything with audio** (speech, foley, ambience) | **6** | 4-step audio is faintly tinny; 6 cleans it and the picture holds. |
-
-Measured on the 48 GB M5, 0.6 MP, ClipProj encoder: 3s silent at 4 steps ran ~7 min against ~12 for
-the 8-step LoRA at 8 steps; 4s spoken at 6 steps ran ~10 min. Whisper recovered the words verbatim
-at every step count from 6 up — **the tinniness at 4 steps is audible, not transcribable**, the same
-caveat as everywhere else here: audio is judged by ear, not a metric.
+14 GB), load it through **ComfyUI-GGUF**'s `Unet Loader (GGUF)`, then patch Parasyte onto it (the
+graph uses the Power Lora Loader; a plain `LoraLoaderModelOnly` at strength 1.0 also works) before
+the sampler.
 
 The base int8 path at 20-25 steps stays the quality lane; its scene detail is visibly finer. Turbo
 is for volume and previz, not the hero render.
+
+### Superseded: lightx2v (historical measurements)
+
+Before Parasyte the fast path was lightx2v's **4-step v1.1** LoRA
+(`minimax_h3_fl2v_turbo_4step_v1.1_768p_comfyui_bf16.safetensors`, 2.0 GB, from
+[lightx2v/Minimax-h3-Turbo](https://huggingface.co/lightx2v/Minimax-h3-Turbo)), run at two step
+counts: **4** for silent b-roll (its design point, a flat plateau up to 8) and **6** for anything
+with audio (4-step audio was faintly tinny). Measured on the 48 GB M5, 0.6 MP, ClipProj encoder:
+3s silent at 4 steps ~7 min vs ~12 for the older 8-step LoRA at 8 steps; 4s spoken at 6 steps ~10
+min. Kept here as benchmark history; Parasyte at 8 steps is the current path.
 
 ## Chaining
 
