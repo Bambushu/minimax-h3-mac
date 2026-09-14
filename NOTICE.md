@@ -23,7 +23,7 @@ permission notice are reproduced in full in `LICENSE-MIT.txt`, as that licence r
   2026-08-07
 - Licence / permission: **redistribution of this modified copy was approved by
   foxfuressence, on condition of attribution** (granted 2026-08-07; the exchange is
-  recorded in `PERMISSION-foxydits.md`). Attribution is given here, in `WORKFLOWS.md`, and
+  recorded in `PERMISSION-foxydits.md`). Attribution is given here, and
   in an "APPLE SILICON PORT - READ ME" note inside the graph itself. Removed on request at
   any time.
 - Modifications made on 2026-08-07. No original node was deleted. Ten existing nodes were
@@ -85,7 +85,7 @@ have no Apple Silicon equivalent.
 
 ## Licence for everything else in this pack
 
-`MacMax_MiniMaxH3_AppleSilicon.json`, `README.md`, `WORKFLOWS.md`, `NOTICE.md`,
+`MacMax_MiniMaxH3_AppleSilicon.json`, `README.md`, `NOTICE.md`,
 `install_node_packs.sh`, `render_h3.py`, `h3_api.json` and `prompt_vertical.txt` are released
 by MAD IT under the MIT licence. Full text in `LICENSE-MIT.txt`. Use, modify and redistribute
 them freely, with attribution.

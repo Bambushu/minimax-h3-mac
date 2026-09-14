@@ -700,7 +700,7 @@
       ],
       "flags": {},
       "order": 8,
-      "mode": 4,
+      "mode": 0,
       "inputs": [
         {
           "localized_name": "clip_name",
@@ -726,7 +726,9 @@
           "localized_name": "CLIP",
           "name": "CLIP",
           "type": "CLIP",
-          "links": []
+          "links": [
+            189
+          ]
         }
       ],
       "title": "Text encoder  (GGUF, type=minimax)",
@@ -1207,12 +1209,12 @@
           ]
         }
       ],
-      "title": "Sigma shift  (stock 12 / 3)",
+      "title": "Sigma shift  (Turbo 8-step: 6 / 3)",
       "properties": {
         "Node name for S&R": "MiniMaxH3SigmaShift"
       },
       "widgets_values": [
-        12,
+        6,
         3
       ]
     },
@@ -1229,7 +1231,7 @@
       ],
       "flags": {},
       "order": 20,
-      "mode": 0,
+      "mode": 4,
       "inputs": [
         {
           "localized_name": "model",
@@ -1399,7 +1401,7 @@
           ]
         }
       ],
-      "title": "Spectrum ON - -27%, faces hold (degree 1 / warmup 1)",
+      "title": "Spectrum OPTIONAL - bypassed by default",
       "properties": {
         "Node name for S&R": "SpectrumApplyMiniMaxH3"
       },
@@ -2174,7 +2176,7 @@
       ],
       "flags": {},
       "order": 14,
-      "mode": 0,
+      "mode": 4,
       "inputs": [
         {
           "localized_name": "clip_name",
@@ -2227,9 +2229,7 @@
           "localized_name": "CLIP",
           "name": "CLIP",
           "type": "CLIP",
-          "links": [
-            189
-          ]
+          "links": null
         }
       ],
       "properties": {
@@ -2240,7 +2240,7 @@
         "minimax",
         "mmh3-8b-ClipProj-celeb-mlp.safetensors",
         "cpu",
-        "dynamic"
+        "resident"
       ]
     },
     {
@@ -2261,7 +2261,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "## CHAINING (Motion Context) + TEXT ENCODER\n\n**Chain clips (motion + audio continue across the cut).** Needs\n[ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context).\nAll four nodes here ship BYPASSED. Before rendering a clip you may want to continue,\nun-bypass Save Latent (~7 MB per clip under output/h3_context/) - a clip rendered without\nit cannot be continued later. To CONTINUE a clip: un-bypass Motion Context, Trim and\nLoad Latent as well, set Load Latent clip_index to the clip you continue FROM and Save\nLatent clip_index to the clip this one IS, queue. The continuation comes back exactly 22\nframes shorter (the pinned context, trimmed for clean concat). Validated on a 48GB M5:\n5s + 5s join r=0.95, the audio bed continues (small level swell). Resolution must match\nbetween chained clips. Motion Context refuses to run without a context latent wired.\n\n**Text encoder: ClipProj 8B is the default.** Qwen3-VL-8B fp8 (+380 MB projection)\ninstead of the 13.6 GB 32B GGUF, ~= 3.7 GB lighter, encoding on CPU - this is what makes\n5s takes fit in 48 GB. Needs\n[ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) + matrices from\nHF NicoLab28/ClipProj-MiniMax-H3. Seed-matched A/B vs the 32B GGUF: identity, wardrobe\nand spoken lines held, speed unchanged.\n\n**Swap back to the 32B GGUF when your prompt names real people, brands or places** -\nthat is ClipProj's one repeatable weak spot. Un-bypass CLIPLoaderGGUF, wire its CLIP\noutput to the sampler node in place of ClipProj's, and bypass ClipProj.\n\nmode=dynamic frees the encoder after encoding; mode=resident keeps it loaded, which is\nfaster across repeated renders but holds ~10.6 GB."
+        "## CHAINING (Motion Context) + LOW-RAM TEXT ENCODER\n\n**Chain clips (motion + audio continue across the cut).** Needs\n[ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context).\nAll four nodes here ship BYPASSED. Before rendering a clip you may want to continue,\nun-bypass Save Latent (~7 MB per clip under output/h3_context/) - a clip rendered without\nit cannot be continued later. To CONTINUE a clip: un-bypass Motion Context, Trim and\nLoad Latent as well, set Load Latent clip_index to the clip you continue FROM and Save\nLatent clip_index to the clip this one IS, queue. The continuation comes back exactly 22\nframes shorter (the pinned context, trimmed for clean concat). Validated on a 48GB M5:\n5s + 5s join r=0.95, the audio bed continues (small level swell). Resolution must match\nbetween chained clips. Motion Context refuses to run without a context latent wired.\n\n**Low-RAM text encoder (optional).** The bypassed ClipProj Loader swaps the 13.6 GB 32B\nGGUF encoder for Qwen3-VL-8B fp8 (+380 MB projection) ~= 3.7 GB lighter - this is what\nmakes 5s takes fit in 48 GB. Needs\n[ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) + matrices from\nHF NicoLab28/ClipProj-MiniMax-H3. To use: un-bypass and wire its CLIP output in place of\nthe GGUF loader. Seed-matched A/B vs GGUF: identity, wardrobe and spoken lines held;\nspeed unchanged. Prompt-sensitive edge cases exist (proper nouns) - eyeball outputs."
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -2359,7 +2359,7 @@
         "Node name for S&R": "LoraLoaderModelOnly"
       },
       "widgets_values": [
-        "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+        "H3-PK-Parasyte-Turbo.safetensors",
         1.0
       ],
       "title": "TURBO 8-step LoRA - optional"
@@ -2445,7 +2445,7 @@
     ],
     [
       189,
-      133,
+      13,
       0,
       104,
       0,
@@ -2759,7 +2759,7 @@
     },
     {
       "id": 5,
-      "title": "SPEED - Spectrum ON by default",
+      "title": "SPEED - Spectrum OFF by default (optional)",
       "bounding": [
         1680,
         18,

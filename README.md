@@ -1,10 +1,6 @@
-# MacMax Turbo — legacy simple-workflow measurements
+# MacMax Turbo
 
-> This file records the older T2V/I2V/FLF experiments and remains useful as benchmark history.
-> It is not the current R2V recipe. Start with `MacMax_H3_R2V_CURRENT.json` and the v20 section
-> of `WORKFLOWS.md`; the active local checkout is ComfyUI 0.32.0.
-
-**v1.2** — MiniMax H3 generates video with native stereo audio in one pass. This runs it locally on a Mac with an optional turbo-LoRA fast path.
+MiniMax H3 generates video with native stereo audio in one pass. This runs it locally on a Mac from a single workflow, `MacMax_MiniMaxH3_AppleSilicon.json`, with an optional turbo-LoRA fast path.
 
 One graph — text-to-video, image-to-video, first/last frame — each with native audio.
 
@@ -74,17 +70,13 @@ The workflow ships sampler `euler`, not the stock templates' `res_multistep`. Sc
 
 ## Turbo LoRA
 
-The current turbo LoRA is **PlagueKind "Parasyte"** (`H3-PK-Parasyte-Turbo.safetensors`, 2.1 GB), which needs **ComfyUI-PlagueKind-Nodes**. It replaced the lightx2v LoRAs.
+The turbo LoRA is **PlagueKind "Parasyte"** (`H3-PK-Parasyte-Turbo.safetensors`, 2.1 GB), which replaced the older lightx2v turbo. It already sits in the workflow, bypassed by default.
 
-The R2V workflow runs it through the rgthree **Power Lora Loader** at **strength 1.0**, sampler **`er_sde`**, scheduler **`beta`**, **8 steps**.
-
-**It needs a GGUF DiT.** Swap the diffusion model for the pruned GGUF ([MiniMax-H3-FL2VA-Pruned-Q5_K_M.gguf](https://huggingface.co/Abiray/MiniMax-H3-Pruned-GGUF), 14 GB), load it through **ComfyUI-GGUF**'s `Unet Loader (GGUF)`, then patch Parasyte onto it.
+**It needs the GGUF DiT.** The int8 base checkpoint has no cheap LoRA patch path — a bf16 LoRA forces it toward full precision and OOMs. To switch to the turbo path: un-bypass the pruned GGUF DiT (`Unet Loader (GGUF)`, [MiniMax-H3-FL2VA-Pruned-Q5_K_M.gguf](https://huggingface.co/Abiray/MiniMax-H3-Pruned-GGUF), 14 GB) and the `LoraLoaderModelOnly` carrying Parasyte at strength 1.0, bypass the base `UNETLoader`, and drop the step count (~8).
 
 The base int8 path at 20-25 steps stays the quality lane; its scene detail is visibly finer. Turbo is for volume and previz.
 
-### Superseded: lightx2v (historical measurements)
-
-Before Parasyte the fast path was lightx2v's **4-step v1.1** LoRA (`minimax_h3_fl2v_turbo_4step_v1.1_768p_comfyui_bf16.safetensors`, 2.0 GB, from [lightx2v/Minimax-h3-Turbo](https://huggingface.co/lightx2v/Minimax-h3-Turbo)), run at two step counts: **4** for silent b-roll and **6** for anything with audio. Measured on the 48 GB M5, 0.6 MP, ClipProj encoder: 3s silent at 4 steps ~7 min; 4s spoken at 6 steps ~10 min.
+The older lightx2v turbo LoRA is deprecated and no longer used.
 
 ## Chaining
 

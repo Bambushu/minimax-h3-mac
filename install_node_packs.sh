@@ -1,14 +1,12 @@
 #!/bin/zsh
-# Custom node packs for the MiniMax H3 Apple Silicon workflows.
+# Custom node packs for the MiniMax H3 Apple Silicon workflow (MacMax_MiniMaxH3_AppleSilicon.json).
 #
-#   MacMax   needs 3 packs: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8, ComfyUI-Spectrum-MiniMax-H3.
-#   Foxydit  needs those 3 plus 5 more.
-#   v20      needs the Foxydit set plus comfyui-obvpm (its reference-image loader).
+#   Required (3): ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8, ComfyUI-Spectrum-MiniMax-H3.
+#   Optional (2): ComfyUI-H3-Motion-Context (chaining), ComfyUI-ClipProj (smaller text encoder).
 #
-# ResolutionSelector is ComfyUI CORE (comfy_extras/nodes_resolution.py). No Resolution-Master
-# or KJNodes pack is needed for it.
+# ResolutionSelector is ComfyUI CORE (comfy_extras/nodes_resolution.py). No extra pack for it.
 #
-# Pass a target: ./install_node_packs.sh macmax | foxydit | v20 | extras | all  (default: all)
+# Pass a target: ./install_node_packs.sh macmax | extras | all   (default: all)
 #
 # DO NOT RUN THIS WHILE A RENDER IS IN FLIGHT. It writes into the venv and the custom_nodes
 # dir, and a half-installed pack breaks ComfyUI on next start.
@@ -25,8 +23,8 @@ clone(){ [[ -d "$(basename $1 .git)" ]] && echo "have $(basename $1 .git)" || gi
 
 PACKS=()
 
-# --- REQUIRED BY BOTH ------------------------------------------------------------
-# GGUF: the stock NVFP4-AWQ text encoder is CUDA-only, every workflow here loads the GGUF one.
+# --- REQUIRED --------------------------------------------------------------------
+# GGUF: the stock NVFP4-AWQ text encoder is CUDA-only; this workflow loads the GGUF one.
 # AppleSilicon-FP8: the int8_convrot checkpoint will not load without it. Launch ComfyUI with
 # ASFP8_INT8_EXT=1.
 clone https://github.com/city96/ComfyUI-GGUF.git
@@ -35,58 +33,27 @@ PACKS+=(ComfyUI-GGUF ComfyUI-AppleSilicon-FP8)
 # ComfyUI-GGUF reports IMPORT FAILED without this exact version
 $PY -m pip install -q "gguf==0.18.0" || echo "  WARN: gguf==0.18.0 failed to install"
 
-# Spectrum: the current MacMax and derived v20 workflow ship it ENABLED. It forecasts skipped sampling steps from a
-# fitted curve instead of reusing a cached state, so fast-changing detail like a mouth
-# survives. Measured on MPS at 0.6 MP/5s/20 steps, same seed: 34:27 vs 47:21 uncached (-27%),
-# 8 of 20 steps forecast, faces intact. EasyCache is faster (31:16) but visibly smears mouths
-# and teeth, so it ships BYPASSED in both. Never enable both at once.
-# PINNED to v0.2.3 (was v0.1.5). We originally pinned v0.1.5 believing later Spectrum needed
-# a newer ComfyUI. That is NOT true of v0.2.3: it ran 28 times on the earlier ComfyUI 0.30.0
-# with zero fallbacks. The pin moved because v0.1.5 has a real defect for anyone using this
-# pack -- both workflows ship Spectrum ENABLED, and v0.1.5 uses ONE shared blend weight for
-# both modalities. H3 packs audio and video into a single transformer sequence, so a forecast
-# error in video reaches audio through joint attention and comes back as rough or distorted
-# sound and tripped/doubled syllables. v0.2.1+ splits the controls (audio_blend_weight 0.0)
-# and adds a transformer-free replay pass (~3.3 s) that reconstructs skipped steps from
-# anchors on BOTH sides. Same schedule: 11 actual transformer calls + 9 forecast at 20 steps.
+# Spectrum: the workflow ships it ENABLED. It forecasts skipped sampling steps from a fitted
+# curve instead of reusing a cached state, so fast-changing detail like a mouth survives.
+# PINNED to v0.2.3: earlier versions share one blend weight across audio+video, and because H3
+# packs audio and video into one transformer sequence a video forecast error reaches audio and
+# comes back as distorted sound. v0.2.1+ splits the controls and adds a replay pass.
 clone https://github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3.git
 ( cd $CN/ComfyUI-Spectrum-MiniMax-H3 && git fetch -q --depth 1 origin tag v0.2.3 2>/dev/null && git -c advice.detachedHead=false checkout -q v0.2.3 || echo "  WARN: could not pin Spectrum v0.2.3, using cloned HEAD" )
 PACKS+=(ComfyUI-Spectrum-MiniMax-H3)
 
-if [[ $TARGET == foxydit || $TARGET == v20 || $TARGET == all ]]; then
-  # --- FOXYDIT (filmmaking rig) -------------------------------------------------------
-  clone https://github.com/rgthree/rgthree-comfy.git
-  clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git
-  clone https://github.com/yolain/ComfyUI-Easy-Use.git
-  clone https://github.com/kijai/ComfyUI-KJNodes.git
-  clone https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git
-  # Spectrum is installed above, for every target.
-  PACKS+=(rgthree-comfy ComfyUI-VideoHelperSuite ComfyUI-Easy-Use ComfyUI-KJNodes
-          ComfyUI-Frame-Interpolation)
-fi
-
-if [[ $TARGET == v20 || $TARGET == all ]]; then
-  # --- v20 ONLY ------------------------------------------------------------------------
-  # LoadImageCrop, the four <Picture N> reference loaders. Unlike the other unresolved node
-  # types in v20 this one is ACTIVE, so without this pack the workflow will not render at all.
-  # It is not in the ComfyUI-Manager registry, which is why it is cloned by URL here.
-  clone https://github.com/obvpm/comfyui-obvpm.git
-  PACKS+=(comfyui-obvpm)
-fi
-
 if [[ $TARGET == extras || $TARGET == all ]]; then
   # --- OPTIONAL: chaining + the smaller text encoder -----------------------------------
-  # Both ship BYPASSED in the workflows, so neither is needed to render. Without the packs
-  # installed their node types will not resolve and ComfyUI shows them red, which is
-  # cosmetic while they stay bypassed. Delete the nodes if you would rather not see it.
+  # Both ship BYPASSED in the workflow, so neither is needed to render. Without the packs
+  # their node types show red, which is cosmetic while bypassed. Delete the nodes if you
+  # would rather not see it.
   clone https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context.git
   clone https://github.com/nicolab28/ComfyUI-ClipProj.git
   PACKS+=(ComfyUI-H3-Motion-Context ComfyUI-ClipProj)
 fi
 
-
-# requirements, minus the NVIDIA-only lines. Those fail to install on Mac. Same for triton,
-# sageattention, flash-attn and xformers, none of which have Apple Silicon builds.
+# Install each pack's requirements, minus the NVIDIA-only lines (they fail on Mac; same for
+# triton, sageattention, flash-attn and xformers, none of which have Apple Silicon builds).
 for d in ${(u)PACKS}; do
   if [[ -f $CN/$d/requirements.txt ]]; then
     grep -viE '^(nvidia|triton|sageattention|flash-attn|xformers)' $CN/$d/requirements.txt \
@@ -101,25 +68,9 @@ cat <<'EOF'
 Done. Restart ComfyUI with:
   ASFP8_INT8_EXT=1 python main.py --port 8288 --reserve-vram 10 --cache-none --disable-smart-memory
 
-Then load a workflow. `MacMax_H3_R2V_CURRENT.json`, installed by `build_mac_v20.py --install`,
-already uses this Mac's `_h3/` model paths. Public workflow files use bare stock filenames, so
-re-pick their loaders once if your models live in subfolders.
+Then load MacMax_MiniMaxH3_AppleSilicon.json. Its loaders use bare stock filenames, so re-pick
+them once if your models live in subfolders.
 
 These node types stay unresolved on Apple Silicon and ship BYPASSED on purpose. Do not enable
-them: SolAttnPatch, MiniMaxH3MemoryEfficientSageAttentionPatch, RIFEInterpolation, LoadAudioUI.
-
-v20's "Temporal Upsample Pass" group needs ComfyUI-MAINodes (github.com/matlowai/ComfyUI-MAINodes).
-It ships BYPASSED so the workflow renders without it; install it only if you want that group.
-
-The generated v20 Mac port leaves all four LoadImageCrop reference loaders bypassed. Re-point and
-enable one or more before R2V. This avoids validating the author's private filenames on first load.
-
-v20 additionally needs ComfyUI 0.32.0 or newer for ModelAttentionBackend, which is an ACTIVE
-node. 0.32.0 also calls comfy_kitchen.int8_attention_is_available(), so upgrade the package
-alongside it or ComfyUI will not boot:
-
-  python -m pip install -U 'comfy-kitchen>=0.2.31'
-
-'Fast Groups Bypasser (rgthree)' is a FRONTEND-only node. It never appears in /object_info and
-is not a missing dependency, whatever a graph checker tells you.
+them: SolAttnPatch, MiniMaxH3MemoryEfficientSageAttentionPatch, LoadAudioUI.
 EOF
