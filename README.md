@@ -6,6 +6,10 @@ Video and native stereo audio, generated together in ComfyUI on a Mac. **One wor
 
 Tested on a **48 GB M5 Pro using MPS**, including a fresh ComfyUI installation. Smaller-memory Macs have not been validated. The five default models need approximately **37 GB of disk space**, plus ComfyUI and its dependencies.
 
+[![MacMax workflow in ComfyUI: settings, prompt and image inputs, models, and output](docs/workflow.png)](docs/workflow.png)
+
+*The main canvas in local ComfyUI. Optional blocks sit below; image placeholders are bypassed by default.*
+
 ## Setup
 
 Use a ComfyUI checkout with its requirements installed in `venv/`. The fresh-install check used **ComfyUI v0.34.0**, frontend **1.51.9** and PyTorch **2.14.0**. Exact versions and test scope are in [release validation](RELEASE_VALIDATION.md).
@@ -88,7 +92,7 @@ Times include model loading, sampling, decoding and saving, but exclude queue wa
 | Smaller text encoder | Enable and wire ClipProj using the instructions below. |
 | 1080p / separate audio | Enable the optional export blocks. 1080p is pixel resizing, not generated detail. |
 
-Image nodes contain `example.png` placeholders: replace them before enabling. Reference-to-video conditioning is not included. The optional 1080p export is portrait-specific; adjust it when changing aspect ratio.
+Image nodes contain `example.png` placeholders: replace them before enabling. **R2V is not included in this release.** ComfyUI has a separate `MiniMaxH3ReferenceToVideo` node for image, video and audio references, but this graph does not wire it and that path has not been tested with the shipped model/LoRA combination. The two image inputs guide the first and last frames; they are not R2V reference inputs. The optional 1080p export is portrait-specific; adjust it when changing aspect ratio.
 
 **Chaining:** enable **Save THIS clip** before rendering clip 1. For the next clip, also enable **Continue FROM clip**, Motion Context and Trim. Set the load/save clip indices, use a distinct chain folder, keep resolution unchanged and bypass image inputs. Continuation trims 22 context frames. Save the sampler latent, not the resized export.
 
