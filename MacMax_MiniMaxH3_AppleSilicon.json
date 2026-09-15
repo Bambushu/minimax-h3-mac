@@ -1,19 +1,19 @@
 {
   "id": "e3f2b845-8f2c-4b5a-9caf-eac1029d3e7e",
   "revision": 0,
-  "last_node_id": 142,
-  "last_link_id": 263,
+  "last_node_id": 143,
+  "last_link_id": 265,
   "nodes": [
     {
       "id": 92,
       "type": "SaveVideo",
       "pos": [
-        2520,
-        630
+        1510,
+        510
       ],
       "size": [
-        340,
-        106
+        360,
+        370
       ],
       "flags": {},
       "order": 34,
@@ -58,7 +58,7 @@
           "localized_name": "video",
           "name": "video",
           "type": "VIDEO",
-          "links": null
+          "links": []
         }
       ],
       "properties": {
@@ -68,18 +68,19 @@
         "video/MacMax_%date:yyyy-MM-dd%",
         "auto",
         "auto"
-      ]
+      ],
+      "title": "Finished video + stereo audio"
     },
     {
       "id": 115,
       "type": "ResolutionSelector",
       "pos": [
         0,
-        70
+        510
       ],
       "size": [
-        339.355078125,
-        126
+        350,
+        125
       ],
       "flags": {},
       "order": 0,
@@ -132,13 +133,13 @@
           ]
         }
       ],
-      "title": "Canvas - 0.6 MP for 5s | 1.03 MP for 3s faces",
+      "title": "Canvas — 0.2 MP starter; raise after first render",
       "properties": {
         "Node name for S&R": "ResolutionSelector"
       },
       "widgets_values": [
         "9:16 (Portrait Widescreen)",
-        0.6,
+        0.2,
         32
       ]
     },
@@ -147,11 +148,11 @@
       "type": "MarkdownNote",
       "pos": [
         0,
-        -620
+        0
       ],
       "size": [
-        940,
-        530
+        480,
+        430
       ],
       "flags": {},
       "order": 1,
@@ -161,7 +162,7 @@
       "title": "MacMax - READ ME FIRST",
       "properties": {},
       "widgets_values": [
-        "# MacMax - MiniMax H3 for Apple Silicon\n\n*(MacMax = Mac + MiniMax. Any Apple Silicon Mac with enough unified memory. It is not a\nMax-chip requirement.)*\n\nVideo with native stereo audio in one pass, running locally on a Mac. Smallest graph that\nstill does T2V / I2V / FLF, tuned to measured numbers rather than to the stock template's\ndefaults (which are presumably tuned for CUDA cards, where they may well be right).\n\n**Memory:** the DiT is ~20 GB and the encoder ~15 GB, loaded in sequence. Tested at 48 GB.\n32 GB is untested and expected to be tight; under 32 GB is not recommended. Reports from\nother configurations welcome.\n\n**Expect ~35 min** for the default 0.6 MP @ 5s / 20 steps, with Spectrum on as shipped\n(~47 min if you bypass it).\n**Step 1 takes several minutes on its own** because the text encoder loads first - it is not\nhung. The seed widget ships on `randomize`; pin it to 6120072732051 to compare against our\nnumbers.\n\n**New here? Read the green SETUP panel on the right first** (four model files, three custom\nnodes, one launch flag). Then edit only the blue `1 - EDIT THESE` column and hit Run.\n\n**Toggles.** Everything optional in this graph toggles the same way: select the node,\npress **Ctrl+B** (bypass). Purple = off. No switch nodes, no extra packs.\n- the two `LoadImage` nodes: both off = **T2V** (default), first on = **I2V**, both on = **FLF**\n  (no R2V here - identity-from-reference-stills is a different conditioning node; use the\n  Foxydit port that ships alongside)\n- `Spectrum`: ships **ON** (-27%, faces hold). Bypass it for a pure uncached reference\n- `EasyCache`: ships OFF and should stay off, see below. **Never run both at once**\n- the `EXTRAS` column: audio preview (on), 1080x1920 export + audio stem (off)\n\n**Troubleshooting.** Model loaders red on first load = your models sit in subfolders;\nre-pick the four files once. That is the only expected error. If the GGUF loader is missing,\n`pip install gguf==0.18.0` into the ComfyUI venv and restart with `ASFP8_INT8_EXT=1`.\n\n**Why 0.6 MP @ 5s.** Cost is a **token budget**, not a resolution or a length limit:\ntokens ~ megapixels x seconds. Measured, 20 steps:\n\n| config | tokens | s/step | note |\n|---|---|---|---|\n| 1.03 MP @ 3s | ~22k | 131.6 | comfortable |\n| **0.6 MP @ 5s** | **~22k** | **137.8** | **near-identical cost, longer shots** |\n| 1.03 MP @ 5s | ~37k | ~340 | ~3x wall clock, near the memory floor |\n\nThose are sampling-only rates, uncached, so they are comparable to each other. Wall clock per\nstep is higher because it carries model load and decode.\n\n**Spectrum ships ON, EasyCache ships OFF.** Both skip sampling steps, but not the same way,\nand it shows. Same seed, same prompt, same 0.6 MP/5s canvas, measured on face crops resized\nto a common size so resolution cannot win for free:\n\n| | wall | fine detail | faces |\n|---|---|---|---|\n| uncached | 47:21 | 0.381 | reference |\n| EasyCache 0.2 | 31:16 | **0.405** | mouths and teeth visibly smeared |\n| **Spectrum d1** | **34:27** | 0.368 | **teeth and lips hold, no artefacts** |\n\nNote EasyCache scores the **highest** on fine detail while looking the **worst**. It is not\nresolving detail, it is injecting spurious high-frequency edge noise, so any sharpness metric\nblesses it. This is the trap the earlier version of this pack fell into: it recommended\nEasyCache on a 0.991 layout correlation computed on thumbnails that cannot see a mouth.\n\nSpectrum *forecasts* the skipped steps from a fitted curve instead of reusing a cached state,\nwhich is why fast-changing detail survives. Measured here: 8 of 20 steps forecast. It costs\n~3 min more than EasyCache and is worth it on anything with a face. EasyCache stays in the\ngraph as a one-keypress option for faceless b-roll, where the artefacts have nothing to\ndamage. **Never enable both** - Spectrum's author is explicit about this.\n\n**Steps: 20.** 15 and 20 show no measurable difference at this metric's resolution (0.940\nboth, vs the uncached 20-step reference) because they evaluate a similar number of real steps.\nBelow ~6 steps **speech breaks before video does** - at 4 steps\nthe picture is clean but dialogue loops or vanishes. Judge audio at 10+ steps only.\n\n**Sigma shift** is stock 12/3. The Turbo LoRA workflow wants 12/6. I could not get that LoRA\nto load on this machine (it OOMs at runtime regardless of canvas), but others report it\nworking, so treat that as my setup rather than a property of the model.\n\nNo triton, no SageAttention, nothing CUDA. None of it has an Apple Silicon build.\n\n---\n**MacMax** by MAD IT. Built on ComfyUI's shipped `video_minimax_h3_t2v` template - the graph\nis that template flattened, so nothing here is a reimplementation. Numbers above are from\n~40 measured renders on a single 48 GB M5 Pro; treat them as a strong prior, not a law.\nOne companion workflow for Apple Silicon ships alongside this one: a port of\n**foxfuressence**'s filmmaking rig."
+        "# MacMax · Parasyte video + audio\n\n**First run**\n1. Install the node packs and five model files (SETUP below).\n2. Select your files in column 3, including Parasyte.\n3. Edit the demo prompt in column 2, then click Run.\n4. Your video with stereo audio appears in column 4.\n\n**Parasyte is ON and fully wired.** Eight steps,\nER-SDE / beta57; shift 12 / 3; strength 1.5.\nLeave the compatibility node on strip.\n\n**Starter canvas:** 0.2 MP, 5 seconds. Increase resolution\nafter the first successful render; it costs time and memory.\nFive seconds rounds to 124 frames (5.17s at 24 fps).\n\n**Image modes:** both images off = T2V; first on = I2V;\nboth on = first/last frame. Select your images first.\nUse the node menu's Bypass action. Purple means off.\n\nChaining and extra exports start OFF.\nDo not use EasyCache or Spectrum with Parasyte: visible artifacts.\nThe optional int8 base path has separate settings below.\nHistorical tests used 48 GB; smaller Macs need testing.\n\n**Measured wall time (48 GB M5 Pro):**\n- 0.2 MP, 5s / 8 steps: **6m 54s**.\n- 0.4 MP, 5s / 8 steps: **12m 52s**.\nSingle runs, including load/decode/save. See README for test conditions."
       ],
       "color": "#222",
       "bgcolor": "#000"
@@ -170,12 +171,12 @@
       "id": 117,
       "type": "MarkdownNote",
       "pos": [
-        1000,
-        -620
+        830,
+        2440
       ],
       "size": [
-        940,
-        530
+        540,
+        750
       ],
       "flags": {},
       "order": 2,
@@ -185,7 +186,7 @@
       "title": "SETUP - models & custom nodes",
       "properties": {},
       "widgets_values": [
-        "## Download these four files\n\nTotal ~41 GB. Paths are relative to your `ComfyUI/models/` folder.\n\n**`diffusion_models/`**\n- [minimax_h3_fl2va_pruned_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors) - 20.9 GB\n\n**`text_encoders/`**\n- [qwen3vl-32B-MiniMax-H3-Q4_K_M.gguf](https://huggingface.co/realrebelai/MiniMax-H3_GGUFs/resolve/main/qwen3vl-32B-MiniMax-H3-Q4_K_M.gguf) - 14.6 GB\n  \u26a0 **GGUF, not the stock NVFP4-AWQ encoder** - that one is CUDA-only.\n\n**`vae/`**\n- [minimax_h3_video_vae_fp16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors) - 5.2 GB\n- [minimax_h3_audio_vae_fp32.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors) - 0.6 GB\n\n```\nComfyUI/models/\n\u251c\u2500\u2500 diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors\n\u251c\u2500\u2500 text_encoders/qwen3vl-32B-MiniMax-H3-Q4_K_M.gguf\n\u2514\u2500\u2500 vae/minimax_h3_video_vae_fp16.safetensors\n    vae/minimax_h3_audio_vae_fp32.safetensors\n```\n\n### Custom nodes: exactly three\n- **ComfyUI-GGUF** (city96), for the text encoder. Also `pip install gguf==0.18.0` or the\n  node silently reports IMPORT FAILED.\n- **ComfyUI-AppleSilicon-FP8**, required; the int8 path will not load without it.\n- **ComfyUI-Spectrum-MiniMax-H3** (xmarre), **pinned to v0.2.3**. This graph ships with\n  Spectrum ENABLED, so without it the `SpectrumApplyMiniMaxH3` node will not resolve and the\n  workflow will not run. `install_node_packs.sh` pins it for you. If you would rather not add\n  it, delete that node and reconnect sigma shift straight to the sampler: you lose 27% speed,\n  nothing else.\n\n`ResolutionSelector` is ComfyUI core (`comfy_extras/nodes_resolution.py`), not a custom\nnode. You do not need KJNodes or Resolution-Master for this workflow.\n\n### Launch ComfyUI like this\n```\nASFP8_INT8_EXT=1 python main.py --reserve-vram 10 --cache-none --disable-smart-memory\n```\n`ASFP8_INT8_EXT=1` is not optional. The memory flags matter because H3 loads three models\nin sequence (encoder ~15 GB, DiT ~20 GB, VAEs ~6 GB) and never needs two at once.\n\n### If the model loaders show red on first load\nThe workflow uses bare stock filenames. If you keep models in subfolders, click each loader\nonce and re-pick the file. That is the only expected error."
+        "## Setup for the default Parasyte path\n\nRun `./install_node_packs.sh` with ComfyUI stopped, then restart.\nDefault packs: ComfyUI-GGUF, PlagueKind Nodes, comfyui-obvpm,\nand AppleSilicon-FP8 (for the optional int8 path).\n`extras` adds Motion Context and ClipProj. `all` installs both sets.\n\nDownload these five files (~37 GB total) into `ComfyUI/models/`:\n\n**diffusion_models/**\n[MiniMax-H3-FL2VA-Pruned-Q5_K_M.gguf](https://huggingface.co/Abiray/MiniMax-H3-Pruned-GGUF/resolve/main/MiniMax-H3-FL2VA-Pruned-Q5_K_M.gguf)\n\n**loras/**\n[H3-PK-Parasyte-Turbo.safetensors](https://huggingface.co/Plaguekind/H3-Lora/resolve/main/H3-PK-Parasyte-Turbo.safetensors)\n\n**text_encoders/**\n[qwen3vl-32B-MiniMax-H3-Q4_K_M.gguf](https://huggingface.co/realrebelai/MiniMax-H3_GGUFs/resolve/main/qwen3vl-32B-MiniMax-H3-Q4_K_M.gguf)\n\n**vae/**\n[minimax_h3_video_vae_fp16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors)\n[minimax_h3_audio_vae_fp32.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors)\n\nSelect your actual filenames in each loader if they live in subfolders.\nUse GGUF for the text encoder, not the CUDA-only NVFP4-AWQ file.\n\nStart ComfyUI from its activated venv:\n```\nASFP8_INT8_EXT=1 python main.py --port 8288 \\\n  --reserve-vram 10 --cache-none --disable-smart-memory\n```\nThe local test stack is ComfyUI 0.34.0, frontend 1.51.9, torch 2.13.0 on MPS.\nDo not apply old 0.30.0 cherry-pick instructions to this newer installation."
       ],
       "color": "#2a4a2a",
       "bgcolor": "#1e3320"
@@ -194,12 +195,12 @@
       "id": 118,
       "type": "MarkdownNote",
       "pos": [
-        1980,
-        -620
+        1420,
+        2440
       ],
       "size": [
-        940,
-        530
+        530,
+        490
       ],
       "flags": {},
       "order": 3,
@@ -209,7 +210,7 @@
       "title": "PROMPTING - read before your first render",
       "properties": {},
       "widgets_values": [
-        "## Prompting H3 - the audio is half the model\n\nH3 generates **video and stereo audio in one pass**. A one-line Stable-Diffusion-style\nprompt will give you mediocre audio and you will conclude the model is overhyped. Give it\nstructure. This is the exact prompt used for every measurement in this pack:\n\n```\nCinematic night footage, 35mm, shallow depth of field, wet tarmac, warm streetlight,\nnatural grain, no lettering anywhere in frame.\n\nScene overview: A white sedan rolls slowly along a wet European street at night.\n\nStoryboard:\n[0s-5s] One continuous take. The car moves steadily through frame as light travels\nacross the paint. No cuts.\n\nCamera: Static low tracking shot at bumper height, slight handheld drift.\n\nAudio: a deep V8 engine rolling past at low speed, tyres on wet tarmac, faint street\nambience.\n\nMusic: none\n\nNo text, subtitles, lettering, signage, logos or watermarks of any kind.\n```\n\n**Rules learned the hard way (measured over ~40 renders):**\n- **ONE CONTINUOUS TAKE.** Writing \"Shot 1 / Shot 2\" makes H3 genuinely cut.\n- **Name subjects specifically.** It anchors on the most specific noun phrase and fills the\n  rest by association. \"Large white American sedan\" produced a 1960s classic; naming the\n  exact model and its features produced the right car every time. **Partial specificity is\n  worse than none** - it looks like it worked.\n- **Speech must be written out verbatim** or you get gibberish. And judge audio only at\n  10+ steps: below ~6 steps speech breaks before the picture does.\n- **Setting gets overridden** more readily than subject, lighting or camera. If a location\n  is non-negotiable, lead with it.\n- **Negatives about CONTENT are unreliable** (\"no visible faces\" was ignored repeatedly).\n  Negatives about *lettering* do hold.\n\nFrame count: duration is snapped by the maths node to the model's grid - frames must satisfy\n`n % 17 == 5`, so 5.0s becomes 124 frames, not 120. That is why the expression looks odd."
+        "## Demo prompt and audio\n\nThe PROMPT node contains the kitchen-to-camera demo in prompt_vertical.txt.\nIt uses real paragraphs, one continuous take and explicit dialogue.\n\nThe 15-word line is brisk for five seconds. Use the default as a timing test;\ncheck whether the entire line is spoken before extending duration, which costs memory.\nHistorical car-scene benchmarks used a different prompt and are not this demo's timings.\n\nFor your own clips, describe subject, scene, camera, sound and any dialogue.\nKeep spoken words explicit. Avoid numbered shots for a continuous take.\n\nDuration rounds up to H3's frame grid: 5 seconds produces 124 frames (5.17s at 24 fps).\nTwo-step smoke tests check execution only; they cannot establish speech quality."
       ],
       "color": "#3a2a4a",
       "bgcolor": "#2a1e33"
@@ -218,12 +219,12 @@
       "id": 11,
       "type": "VAELoader",
       "pos": [
-        1290,
-        350
+        1090,
+        635
       ],
       "size": [
-        330,
-        110
+        360,
+        100
       ],
       "flags": {},
       "order": 4,
@@ -269,12 +270,12 @@
       "id": 24,
       "type": "VAELoader",
       "pos": [
-        1290,
-        490
+        1090,
+        780
       ],
       "size": [
-        330,
-        110
+        360,
+        100
       ],
       "flags": {},
       "order": 5,
@@ -318,16 +319,14 @@
       "id": 23,
       "type": "VAEDecodeAudio",
       "pos": [
-        2520,
+        1510,
         210
       ],
       "size": [
-        330,
-        110
+        360,
+        100
       ],
-      "flags": {
-        "collapsed": false
-      },
+      "flags": {},
       "order": 26,
       "mode": 0,
       "inputs": [
@@ -363,16 +362,14 @@
       "id": 10,
       "type": "VAEDecode",
       "pos": [
-        2520,
-        70
+        1510,
+        60
       ],
       "size": [
-        330,
-        110
+        360,
+        100
       ],
-      "flags": {
-        "collapsed": false
-      },
+      "flags": {},
       "order": 25,
       "mode": 0,
       "inputs": [
@@ -408,12 +405,12 @@
       "id": 17,
       "type": "KSamplerSelect",
       "pos": [
-        2110,
-        70
+        1090,
+        1070
       ],
       "size": [
-        330,
-        110
+        360,
+        90
       ],
       "flags": {},
       "order": 6,
@@ -443,18 +440,19 @@
         "Node name for S&R": "KSamplerSelect"
       },
       "widgets_values": [
-        "euler"
-      ]
+        "er_sde"
+      ],
+      "title": "Sampler — Parasyte ER-SDE"
     },
     {
       "id": 9,
       "type": "BasicScheduler",
       "pos": [
         0,
-        490
+        980
       ],
       "size": [
-        330,
+        350,
         110
       ],
       "flags": {},
@@ -505,13 +503,13 @@
           ]
         }
       ],
-      "title": "Steps  (20 - keep)",
+      "title": "Steps — Parasyte 8",
       "properties": {
         "Node name for S&R": "BasicScheduler"
       },
       "widgets_values": [
-        "simple",
-        20,
+        "beta57",
+        8,
         1
       ]
     },
@@ -519,11 +517,11 @@
       "id": 14,
       "type": "SamplerCustomAdvanced",
       "pos": [
-        2110,
-        350
+        530,
+        1520
       ],
       "size": [
-        330,
+        510,
         110
       ],
       "flags": {},
@@ -576,7 +574,7 @@
           "localized_name": "denoised_output",
           "name": "denoised_output",
           "type": "LATENT",
-          "links": null
+          "links": []
         }
       ],
       "properties": {
@@ -588,12 +586,12 @@
       "id": 16,
       "type": "BasicGuider",
       "pos": [
-        2110,
-        210
+        530,
+        1380
       ],
       "size": [
-        330,
-        110
+        510,
+        90
       ],
       "flags": {},
       "order": 23,
@@ -631,16 +629,16 @@
       "id": 6,
       "type": "UNETLoader",
       "pos": [
-        1290,
-        70
+        0,
+        1380
       ],
       "size": [
-        330,
-        110
+        370,
+        100
       ],
       "flags": {},
       "order": 7,
-      "mode": 0,
+      "mode": 4,
       "inputs": [
         {
           "localized_name": "unet_name",
@@ -666,12 +664,10 @@
           "localized_name": "MODEL",
           "name": "MODEL",
           "type": "MODEL",
-          "links": [
-            228
-          ]
+          "links": []
         }
       ],
-      "title": "DiT checkpoint",
+      "title": "Optional int8 base — Parasyte must be disconnected",
       "properties": {
         "Node name for S&R": "UNETLoader",
         "models": [
@@ -691,12 +687,12 @@
       "id": 13,
       "type": "CLIPLoaderGGUF",
       "pos": [
-        1290,
-        210
+        1090,
+        490
       ],
       "size": [
-        330,
-        110
+        360,
+        100
       ],
       "flags": {},
       "order": 8,
@@ -753,11 +749,11 @@
       "type": "RandomNoise",
       "pos": [
         0,
-        350
+        825
       ],
       "size": [
-        330,
-        110
+        350,
+        105
       ],
       "flags": {},
       "order": 9,
@@ -783,25 +779,25 @@
           ]
         }
       ],
-      "title": "Seed (randomize; pin to compare runs)",
+      "title": "Seed — fixed demo; randomize for variants",
       "properties": {
         "Node name for S&R": "RandomNoise"
       },
       "widgets_values": [
-        6120072732051,
-        "randomize"
+        77001,
+        "fixed"
       ]
     },
     {
       "id": 91,
       "type": "CreateVideo",
       "pos": [
-        2520,
-        350
+        1510,
+        360
       ],
       "size": [
-        330,
-        110
+        360,
+        100
       ],
       "flags": {},
       "order": 30,
@@ -862,12 +858,12 @@
       "id": 104,
       "type": "MiniMaxH3ImageToVideo",
       "pos": [
-        410,
-        70
+        530,
+        60
       ],
       "size": [
-        420,
-        300
+        510,
+        570
       ],
       "flags": {},
       "order": 19,
@@ -955,12 +951,12 @@
           ]
         }
       ],
-      "title": "PROMPT + conditioning",
+      "title": "Demo prompt — edit here",
       "properties": {
         "Node name for S&R": "MiniMaxH3ImageToVideo"
       },
       "widgets_values": [
-        "Vertical smartphone-style portrait video, 28mm front camera look, soft late-afternoon window light from the left, natural skin texture, slight handheld drift, fine grain, no lettering anywhere in frame.\n\nScene overview: A woman in her late twenties stands in a bright home kitchen talking straight to camera, casual and warm, like a phone recording.\n\nStoryboard:\n[0s-5s] Shot 1: Vertical medium close-up, head and shoulders filling the upper two thirds of the frame, kitchen counter and a window softly out of focus behind her. She looks into the lens and speaks, one small nod, natural blink.\n\nCamera: Static Shot held at chest height, very slight handheld drift.\n\nAudio: her voice, close and clear with a natural American accent, faint room tone and a distant street hum underneath. She says: \"This whole clip came out of a laptop. Picture and sound, one pass, no studio.\"\n\nMusic: none\n\nNo text, subtitles, lettering, signage, logos or watermarks of any kind.",
+        "Vertical smartphone-style portrait video, 28mm front camera look, soft late-afternoon window light from the left, natural skin texture, slight handheld drift, fine grain, no lettering anywhere in frame.\n\nScene overview: A woman in her late twenties stands in a bright home kitchen talking straight to camera, casual and warm, like a phone recording.\n\nStoryboard:\n[0s-5s] One continuous take: Vertical medium close-up, head and shoulders filling the upper two thirds of the frame, kitchen counter and a window softly out of focus behind her. She looks into the lens and speaks, one small nod, natural blink.\n\nCamera: Static Shot held at chest height, very slight handheld drift.\n\nAudio: her voice, close and clear with a natural American accent, faint room tone and a distant street hum underneath. She says: \"This whole clip came out of a laptop. Picture and sound, one pass, no studio.\"\n\nMusic: none\n\nNo text, subtitles, lettering, signage, logos or watermarks of any kind.\n",
         1344,
         768,
         73
@@ -970,16 +966,14 @@
       "id": 107,
       "type": "ComfyMathExpression",
       "pos": [
-        410,
-        400
+        530,
+        1110
       ],
       "size": [
-        330,
-        128
+        510,
+        120
       ],
-      "flags": {
-        "collapsed": false
-      },
+      "flags": {},
       "order": 17,
       "mode": 0,
       "inputs": [
@@ -1013,7 +1007,7 @@
           "localized_name": "FLOAT",
           "name": "FLOAT",
           "type": "FLOAT",
-          "links": null
+          "links": []
         },
         {
           "localized_name": "INT",
@@ -1027,7 +1021,7 @@
           "localized_name": "BOOL",
           "name": "BOOL",
           "type": "BOOLEAN",
-          "links": null
+          "links": []
         }
       ],
       "properties": {
@@ -1042,11 +1036,11 @@
       "type": "PrimitiveFloat",
       "pos": [
         0,
-        210
+        685
       ],
       "size": [
-        330,
-        110
+        350,
+        90
       ],
       "flags": {},
       "order": 10,
@@ -1072,7 +1066,7 @@
           ]
         }
       ],
-      "title": "Duration (seconds) - 5 max at 0.6 MP",
+      "title": "Duration — seconds (rounded to frame grid)",
       "properties": {
         "Node name for S&R": "PrimitiveFloat"
       },
@@ -1081,94 +1075,15 @@
       ]
     },
     {
-      "id": 112,
-      "type": "EasyCache",
-      "pos": [
-        1700,
-        70
-      ],
-      "size": [
-        512.4751953125,
-        130
-      ],
-      "flags": {},
-      "order": 16,
-      "mode": 4,
-      "inputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 228
-        },
-        {
-          "localized_name": "reuse_threshold",
-          "name": "reuse_threshold",
-          "type": "FLOAT",
-          "widget": {
-            "name": "reuse_threshold"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "start_percent",
-          "name": "start_percent",
-          "type": "FLOAT",
-          "widget": {
-            "name": "start_percent"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "end_percent",
-          "name": "end_percent",
-          "type": "FLOAT",
-          "widget": {
-            "name": "end_percent"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "verbose",
-          "name": "verbose",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "verbose"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "MODEL",
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            234
-          ]
-        }
-      ],
-      "title": "EasyCache OFF - smears faces. Spectrum is on instead, never run both",
-      "properties": {
-        "Node name for S&R": "EasyCache"
-      },
-      "widgets_values": [
-        0.2,
-        0.15,
-        0.95,
-        false
-      ]
-    },
-    {
       "id": 119,
       "type": "MiniMaxH3SigmaShift",
       "pos": [
-        1700,
-        210
+        1090,
+        925
       ],
       "size": [
-        330,
-        110
+        360,
+        100
       ],
       "flags": {},
       "order": 18,
@@ -1205,239 +1120,32 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            237
-          ]
-        }
-      ],
-      "title": "Sigma shift  (Turbo 8-step: 6 / 3)",
-      "properties": {
-        "Node name for S&R": "MiniMaxH3SigmaShift"
-      },
-      "widgets_values": [
-        6,
-        3
-      ]
-    },
-    {
-      "id": 120,
-      "type": "SpectrumApplyMiniMaxH3",
-      "pos": [
-        1700,
-        350
-      ],
-      "size": [
-        403.3873046875,
-        418
-      ],
-      "flags": {},
-      "order": 20,
-      "mode": 4,
-      "inputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 237
-        },
-        {
-          "localized_name": "enabled",
-          "name": "enabled",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "enabled"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "blend_weight",
-          "name": "blend_weight",
-          "type": "FLOAT",
-          "widget": {
-            "name": "blend_weight"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "degree",
-          "name": "degree",
-          "type": "INT",
-          "widget": {
-            "name": "degree"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "ridge_lambda",
-          "name": "ridge_lambda",
-          "type": "FLOAT",
-          "widget": {
-            "name": "ridge_lambda"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "window_size",
-          "name": "window_size",
-          "type": "FLOAT",
-          "widget": {
-            "name": "window_size"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "flex_window",
-          "name": "flex_window",
-          "type": "FLOAT",
-          "widget": {
-            "name": "flex_window"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "warmup_steps",
-          "name": "warmup_steps",
-          "type": "INT",
-          "widget": {
-            "name": "warmup_steps"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "tail_actual_steps",
-          "name": "tail_actual_steps",
-          "type": "INT",
-          "widget": {
-            "name": "tail_actual_steps"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "max_history",
-          "name": "max_history",
-          "type": "INT",
-          "widget": {
-            "name": "max_history"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "debug",
-          "name": "debug",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "debug"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "history_storage",
-          "name": "history_storage",
-          "shape": 7,
-          "type": "COMBO",
-          "widget": {
-            "name": "history_storage"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "bootstrap_first_forecast",
-          "name": "bootstrap_first_forecast",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "bootstrap_first_forecast"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "anchor_residual_feedback",
-          "name": "anchor_residual_feedback",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "anchor_residual_feedback"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "selective_rollback_correction",
-          "name": "selective_rollback_correction",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "selective_rollback_correction"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "offline_smoothing_replay",
-          "name": "offline_smoothing_replay",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "offline_smoothing_replay"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "audio_blend_weight",
-          "name": "audio_blend_weight",
-          "shape": 7,
-          "type": "FLOAT",
-          "widget": {
-            "name": "audio_blend_weight"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "links": [
             238,
             239
           ]
         }
       ],
-      "title": "Spectrum OPTIONAL - bypassed by default",
+      "title": "Sigma shift — Parasyte 12 / 3",
       "properties": {
-        "Node name for S&R": "SpectrumApplyMiniMaxH3"
+        "Node name for S&R": "MiniMaxH3SigmaShift"
       },
       "widgets_values": [
-        true,
-        0.5,
-        1,
-        0.1,
-        2,
-        0.75,
-        1,
-        1,
-        8,
-        false,
-        "system_ram",
-        true,
-        false,
-        false,
-        true,
-        0
+        12,
+        3
       ]
     },
     {
       "id": 121,
       "type": "LoadImage",
       "pos": [
-        910,
-        70
+        530,
+        745
       ],
       "size": [
-        300,
-        330
+        235,
+        310
       ],
-      "flags": {
-        "collapsed": true
-      },
+      "flags": {},
       "order": 11,
       "mode": 4,
       "inputs": [
@@ -1476,7 +1184,7 @@
           "links": []
         }
       ],
-      "title": "[I2V: enable me]",
+      "title": "First image — enable for I2V",
       "properties": {
         "Node name for S&R": "LoadImage"
       },
@@ -1489,16 +1197,14 @@
       "id": 122,
       "type": "LoadImage",
       "pos": [
-        910,
-        134
+        795,
+        745
       ],
       "size": [
-        300,
-        330
+        235,
+        310
       ],
-      "flags": {
-        "collapsed": true
-      },
+      "flags": {},
       "order": 12,
       "mode": 4,
       "inputs": [
@@ -1537,7 +1243,7 @@
           "links": []
         }
       ],
-      "title": "[FLF: enable me too]",
+      "title": "Last image — also enable for FLF",
       "properties": {
         "Node name for S&R": "LoadImage"
       },
@@ -1550,12 +1256,12 @@
       "id": 123,
       "type": "PreviewAudio",
       "pos": [
-        2940,
-        70
+        1510,
+        940
       ],
       "size": [
-        330,
-        110
+        360,
+        140
       ],
       "flags": {},
       "order": 31,
@@ -1595,12 +1301,12 @@
       "id": 124,
       "type": "ImageScale",
       "pos": [
-        2940,
-        210
+        0,
+        2440
       ],
       "size": [
-        330,
-        130
+        360,
+        150
       ],
       "flags": {},
       "order": 29,
@@ -1659,7 +1365,7 @@
           ]
         }
       ],
-      "title": "[EXPORT] upscale to 1080x1920",
+      "title": "Optional resize — pixels only, no new detail",
       "properties": {
         "Node name for S&R": "ImageScale"
       },
@@ -1674,12 +1380,12 @@
       "id": 125,
       "type": "CreateVideo",
       "pos": [
-        2520,
-        490
+        0,
+        2640
       ],
       "size": [
-        330,
-        110
+        360,
+        100
       ],
       "flags": {},
       "order": 33,
@@ -1741,12 +1447,12 @@
       "id": 126,
       "type": "SaveVideo",
       "pos": [
-        2520,
-        900
+        0,
+        2790
       ],
       "size": [
-        340,
-        106
+        360,
+        300
       ],
       "flags": {},
       "order": 35,
@@ -1808,12 +1514,12 @@
       "id": 127,
       "type": "SaveAudio",
       "pos": [
-        2940,
-        350
+        410,
+        2440
       ],
       "size": [
-        330,
-        112
+        360,
+        120
       ],
       "flags": {},
       "order": 32,
@@ -1864,12 +1570,12 @@
       "id": 129,
       "type": "MiniMaxH3MotionContext",
       "pos": [
-        3350,
-        180
+        1090,
+        1525
       ],
       "size": [
-        284.392578125,
-        202
+        360,
+        240
       ],
       "flags": {},
       "order": 21,
@@ -1970,12 +1676,12 @@
       "id": 130,
       "type": "MiniMaxH3MotionContextTrim",
       "pos": [
-        3350,
-        420
+        1090,
+        1815
       ],
       "size": [
-        270,
-        126
+        360,
+        155
       ],
       "flags": {},
       "order": 28,
@@ -2059,12 +1765,12 @@
       "id": 131,
       "type": "MiniMaxH3MotionContextSaveLatent",
       "pos": [
-        3350,
-        580
+        1090,
+        2020
       ],
       "size": [
-        305.6890625,
-        82
+        360,
+        100
       ],
       "flags": {},
       "order": 27,
@@ -2100,7 +1806,7 @@
           "localized_name": "latent_path",
           "name": "latent_path",
           "type": "STRING",
-          "links": null
+          "links": []
         }
       ],
       "properties": {
@@ -2109,18 +1815,19 @@
       "widgets_values": [
         "h3_context/mychain/clip",
         1
-      ]
+      ],
+      "title": "Save THIS clip for continuation"
     },
     {
       "id": 132,
       "type": "MiniMaxH3MotionContextLoadLatent",
       "pos": [
-        3350,
-        60
+        1090,
+        1380
       ],
       "size": [
-        306.1744140625,
-        82
+        360,
+        95
       ],
       "flags": {},
       "order": 13,
@@ -2161,18 +1868,19 @@
       "widgets_values": [
         "h3_context/mychain",
         1
-      ]
+      ],
+      "title": "Continue FROM clip"
     },
     {
       "id": 133,
       "type": "ClipProjLoader",
       "pos": [
-        3350,
-        700
+        1510,
+        1380
       ],
       "size": [
-        279.5005859375,
-        154
+        360,
+        210
       ],
       "flags": {},
       "order": 14,
@@ -2229,30 +1937,31 @@
           "localized_name": "CLIP",
           "name": "CLIP",
           "type": "CLIP",
-          "links": null
+          "links": []
         }
       ],
       "properties": {
         "Node name for S&R": "ClipProjLoader"
       },
       "widgets_values": [
-        "_h3/qwen3vl_8b_fp8_scaled.safetensors",
+        "qwen3vl_8b_fp8_scaled.safetensors",
         "minimax",
         "mmh3-8b-ClipProj-celeb-mlp.safetensors",
         "cpu",
         "resident"
-      ]
+      ],
+      "title": "Optional smaller text encoder — reconnect CLIP"
     },
     {
       "id": 134,
       "type": "MarkdownNote",
       "pos": [
-        3350,
-        890
+        1510,
+        1650
       ],
       "size": [
-        620,
-        270
+        440,
+        640
       ],
       "flags": {},
       "order": 15,
@@ -2261,7 +1970,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "## CHAINING (Motion Context) + LOW-RAM TEXT ENCODER\n\n**Chain clips (motion + audio continue across the cut).** Needs\n[ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context).\nAll four nodes here ship BYPASSED. Before rendering a clip you may want to continue,\nun-bypass Save Latent (~7 MB per clip under output/h3_context/) - a clip rendered without\nit cannot be continued later. To CONTINUE a clip: un-bypass Motion Context, Trim and\nLoad Latent as well, set Load Latent clip_index to the clip you continue FROM and Save\nLatent clip_index to the clip this one IS, queue. The continuation comes back exactly 22\nframes shorter (the pinned context, trimmed for clean concat). Validated on a 48GB M5:\n5s + 5s join r=0.95, the audio bed continues (small level swell). Resolution must match\nbetween chained clips. Motion Context refuses to run without a context latent wired.\n\n**Low-RAM text encoder (optional).** The bypassed ClipProj Loader swaps the 13.6 GB 32B\nGGUF encoder for Qwen3-VL-8B fp8 (+380 MB projection) ~= 3.7 GB lighter - this is what\nmakes 5s takes fit in 48 GB. Needs\n[ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) + matrices from\nHF NicoLab28/ClipProj-MiniMax-H3. To use: un-bypass and wire its CLIP output in place of\nthe GGUF loader. Seed-matched A/B vs GGUF: identity, wardrobe and spoken lines held;\nspeed unchanged. Prompt-sensitive edge cases exist (proper nouns) - eyeball outputs."
+        "## CHAINING (Motion Context) + LOW-RAM TEXT ENCODER\n\n**Chain clips (motion + audio continue across the cut).** Needs\n[ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context).\nAll four nodes here ship BYPASSED. Before rendering a clip you may want to continue,\nun-bypass Save Latent (~7 MB per clip under output/h3_context/) - a clip rendered without\nit cannot be continued later. To CONTINUE a clip: un-bypass Motion Context, Trim and\nLoad Latent as well, set Load Latent clip_index to the clip you continue FROM and Save\nLatent clip_index to the clip this one IS. Bypass both image inputs for continuations,\nand use a new h3_context folder for each separate chain. Then queue. The continuation comes back exactly 22\nframes shorter (the pinned context, trimmed for clean concat). Validated on a 48GB M5:\n5s + 5s join r=0.95, the audio bed continues (small level swell). Resolution must match\nbetween chained clips. Motion Context refuses to run without a context latent wired.\n\n**Low-RAM text encoder (optional).** The bypassed ClipProj Loader swaps the 13.6 GB 32B\nGGUF encoder for Qwen3-VL-8B fp8 (+380 MB projection) ~= 3.7 GB lighter in the historical comparison. Memory savings depend on the configuration. Needs\n[ComfyUI-ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) + matrices from\nHF NicoLab28/ClipProj-MiniMax-H3. To use: un-bypass and wire its CLIP output in place of\nthe GGUF loader, then bypass the GGUF loader. Select the installed encoder and projection\nfilenames in their dropdowns. Seed-matched A/B vs GGUF: identity, wardrobe and spoken lines held;\nspeed unchanged. Prompt-sensitive edge cases exist (proper nouns) - eyeball outputs."
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -2270,16 +1979,16 @@
       "id": 140,
       "type": "UnetLoaderGGUF",
       "pos": [
-        1290,
-        700
+        1090,
+        60
       ],
       "size": [
-        330,
-        58
+        360,
+        85
       ],
       "flags": {},
       "order": 8,
-      "mode": 4,
+      "mode": 0,
       "inputs": [
         {
           "localized_name": "unet_name",
@@ -2296,37 +2005,46 @@
           "localized_name": "MODEL",
           "name": "MODEL",
           "type": "MODEL",
-          "links": []
+          "links": [
+            264
+          ]
         }
       ],
       "properties": {
-        "Node name for S&R": "UnetLoaderGGUF"
+        "Node name for S&R": "UnetLoaderGGUF",
+        "models": [
+          {
+            "name": "MiniMax-H3-FL2VA-Pruned-Q5_K_M.gguf",
+            "directory": "diffusion_models",
+            "url": "https://huggingface.co/Abiray/MiniMax-H3-Pruned-GGUF/resolve/main/MiniMax-H3-FL2VA-Pruned-Q5_K_M.gguf"
+          }
+        ]
       },
       "widgets_values": [
         "MiniMax-H3-FL2VA-Pruned-Q5_K_M.gguf"
       ],
-      "title": "LOW-SPEC DiT (GGUF) - optional"
+      "title": "1 · GGUF diffusion model"
     },
     {
       "id": 141,
       "type": "LoraLoaderModelOnly",
       "pos": [
-        1290,
-        800
+        1090,
+        195
       ],
       "size": [
-        330,
-        82
+        360,
+        100
       ],
       "flags": {},
       "order": 9,
-      "mode": 4,
+      "mode": 0,
       "inputs": [
         {
           "localized_name": "model",
           "name": "model",
           "type": "MODEL",
-          "link": null
+          "link": 264
         },
         {
           "localized_name": "lora_name",
@@ -2352,28 +2070,37 @@
           "localized_name": "MODEL",
           "name": "MODEL",
           "type": "MODEL",
-          "links": []
+          "links": [
+            265
+          ]
         }
       ],
       "properties": {
-        "Node name for S&R": "LoraLoaderModelOnly"
+        "Node name for S&R": "LoraLoaderModelOnly",
+        "models": [
+          {
+            "name": "H3-PK-Parasyte-Turbo.safetensors",
+            "directory": "loras",
+            "url": "https://huggingface.co/Plaguekind/H3-Lora/resolve/main/H3-PK-Parasyte-Turbo.safetensors"
+          }
+        ]
       },
       "widgets_values": [
         "H3-PK-Parasyte-Turbo.safetensors",
-        1.0
+        1.5
       ],
-      "title": "TURBO 8-step LoRA - optional"
+      "title": "2 · Parasyte — strength 1.5"
     },
     {
       "id": 142,
       "type": "MarkdownNote",
       "pos": [
-        1660,
-        700
+        0,
+        1530
       ],
       "size": [
-        430,
-        300
+        460,
+        700
       ],
       "flags": {},
       "order": 10,
@@ -2382,8 +2109,54 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "## Low-spec path (32 GB and under)\n\nThe default stack needs ~36 GB and will NOT fit a 32 GB Mac.\nSwapping the DiT for a GGUF one does fit, and it is the only\nformat here that accepts a LoRA.\n\n**To switch:**\n1. Un-bypass **LOW-SPEC DiT (GGUF)** and pick your quant.\n2. Drag its MODEL output to **MiniMaxH3SigmaShift** (replacing\n   the UNETLoader link), then bypass the UNETLoader.\n3. Optional speed: un-bypass **TURBO 8-step LoRA**, put it\n   between the GGUF loader and SigmaShift, set steps to 8.\n\n**Weights** (Abiray/MiniMax-H3-Pruned-GGUF, FL2VA or Ref2VA):\nQ3_K_M 8.3 GB / Q4_K_M 10.8 GB / Q5_K_M 13.1 GB\nLoRA: lightx2v/Minimax-h3-Turbo, the `_comfyui_bf16` file.\n\n**Measured on a 48 GB M5, 3s at 0.6 MP:**\n- 15 steps, int8_convrot, Spectrum ...... 12:17 sampling\n- 8 steps, GGUF Q5 + turbo, no Spectrum . 10:13\n- 8 steps, GGUF Q5 + turbo, Spectrum .... see README\n\nGGUF costs ~60% more per step than int8_convrot, so without\nthe LoRA the default stack is still faster. The LoRA cannot be\nused on int8_convrot at all - it OOMs."
+        "## Optional int8 base path (20 steps)\n\nThe default is now Parasyte on GGUF. This older int8 loader is OFF and disconnected.\nOnly use it if you have the matching pruned FL2VA int8 checkpoint installed.\n\n1. Select the int8 checkpoint and enable this loader.\n2. Connect its MODEL output to Sigma shift's model input, replacing the compatibility cable.\n3. Bypass GGUF DiT, Parasyte and compatibility in column 3.\n4. Set 20 steps, Euler / Simple, sigma shift 6 / 3. Do not use EasyCache or Spectrum with turbo LoRAs.\n\n**Return to Parasyte:** reconnect compatibility MODEL → Sigma shift model;\nenable GGUF, Parasyte and compatibility, bypass this int8 loader.\nRestore 8 steps, ER-SDE / beta57, shift 12 / 3, strength 1.5, compatibility strip.\n\n**GGUF without LoRA:** leave GGUF and compatibility enabled, bypass Parasyte;\nset the base sampling settings above. The strip fix is harmless without a LoRA.\n\nNever feed Parasyte from this int8 loader. The release's turbo path was tested on GGUF.\n\n[Optional int8 checkpoint](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors)\n[Parasyte model card](https://huggingface.co/Plaguekind/H3-Lora)"
       ]
+    },
+    {
+      "id": 143,
+      "type": "H3AdaLNLoRAFix",
+      "pos": [
+        1090,
+        345
+      ],
+      "size": [
+        360,
+        95
+      ],
+      "flags": {},
+      "order": 40,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 265
+        },
+        {
+          "name": "mode",
+          "type": "COMBO",
+          "widget": {
+            "name": "mode"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            234
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "H3AdaLNLoRAFix"
+      },
+      "widgets_values": [
+        "strip"
+      ],
+      "title": "3 · Pruned-model compatibility — strip"
     }
   ],
   "links": [
@@ -2492,14 +2265,6 @@
       "LATENT"
     ],
     [
-      228,
-      6,
-      0,
-      112,
-      0,
-      "MODEL"
-    ],
-    [
       231,
       91,
       0,
@@ -2525,23 +2290,15 @@
     ],
     [
       234,
-      112,
+      143,
       0,
       119,
-      0,
-      "MODEL"
-    ],
-    [
-      237,
-      119,
-      0,
-      120,
       0,
       "MODEL"
     ],
     [
       238,
-      120,
+      119,
       0,
       9,
       0,
@@ -2549,7 +2306,7 @@
     ],
     [
       239,
-      120,
+      119,
       0,
       16,
       0,
@@ -2706,129 +2463,166 @@
       131,
       0,
       "LATENT"
+    ],
+    [
+      264,
+      140,
+      0,
+      141,
+      0,
+      "MODEL"
+    ],
+    [
+      265,
+      141,
+      0,
+      143,
+      0,
+      "MODEL"
     ]
   ],
   "groups": [
     {
       "id": 1,
-      "title": "1 - EDIT THESE",
+      "title": "1 · START + SETTINGS",
       "bounding": [
         -20,
-        18,
-        370,
-        620
+        -55,
+        520,
+        1320
       ],
-      "color": "#3f789e",
+      "color": "#345b76",
+      "font_size": 22,
       "flags": {}
     },
     {
       "id": 2,
-      "title": "2 - PROMPT",
+      "title": "2 · PROMPT + IMAGES",
       "bounding": [
-        390,
-        18,
-        460,
-        530
+        510,
+        -55,
+        550,
+        1320
       ],
-      "color": "#2a6b3f",
+      "color": "#365f4b",
+      "font_size": 22,
       "flags": {}
     },
     {
       "id": 3,
-      "title": "3 - MODE: bypassed = T2V. Enable 1st = I2V, both = FLF",
+      "title": "3 · MODELS — SET ONCE",
       "bounding": [
-        890,
-        18,
-        340,
-        188
+        1070,
+        -55,
+        400,
+        1320
       ],
-      "color": "#7a4b8c",
+      "color": "#62503a",
+      "font_size": 22,
       "flags": {}
     },
     {
       "id": 4,
-      "title": "MODELS (set once)",
+      "title": "4 · OUTPUT",
       "bounding": [
-        1270,
-        18,
-        370,
-        620
+        1490,
+        -55,
+        480,
+        1320
       ],
-      "color": "#653",
+      "color": "#345b76",
+      "font_size": 22,
       "flags": {}
     },
     {
       "id": 5,
-      "title": "SPEED - Spectrum OFF by default (optional)",
+      "title": "OPTIONAL · BASE MODEL ALTERNATIVE",
       "bounding": [
-        1680,
-        18,
-        370,
-        480
+        -20,
+        1310,
+        520,
+        1020
       ],
-      "color": "#8a6d1f",
+      "color": "#655077",
+      "font_size": 22,
       "flags": {}
     },
     {
       "id": 6,
-      "title": "SAMPLING (internals)",
+      "title": "SAMPLER INTERNALS",
       "bounding": [
-        2090,
-        18,
-        370,
-        480
+        510,
+        1310,
+        550,
+        400
       ],
-      "color": "#444",
+      "color": "#62503a",
+      "font_size": 22,
       "flags": {}
     },
     {
       "id": 7,
-      "title": "OUTPUT",
+      "title": "OPTIONAL · CONTINUE A CLIP",
       "bounding": [
-        2500,
-        18,
-        380,
-        1160
+        1070,
+        1310,
+        400,
+        1020
       ],
-      "color": "#3f5159",
+      "color": "#365f4b",
+      "font_size": 22,
       "flags": {}
     },
     {
       "id": 8,
-      "title": "EXTRAS - enable if you want them",
+      "title": "OPTIONAL · SMALLER ENCODER + GUIDE",
       "bounding": [
-        2920,
-        18,
-        370,
-        480
+        1490,
+        1310,
+        480,
+        1020
       ],
-      "color": "#2a6b3f",
+      "color": "#655077",
+      "font_size": 22,
       "flags": {}
     },
     {
       "id": 9,
-      "title": "CHAINING + LOW-RAM ENCODER (optional, all bypassed)",
+      "title": "OPTIONAL · RESIZE + AUDIO FILE",
       "bounding": [
-        3330,
-        18,
-        660,
-        1160
+        -20,
+        2370,
+        810,
+        880
       ],
-      "color": "#3f789e",
-      "font_size": 24,
+      "color": "#345b76",
+      "font_size": 22,
       "flags": {}
     },
     {
-      "id": 90,
-      "title": "LOW-SPEC / TURBO (optional, bypassed)",
+      "id": 10,
+      "title": "SETUP · READ ONCE",
       "bounding": [
-        1270,
-        640,
-        850,
-        380
+        810,
+        2370,
+        580,
+        880
       ],
-      "color": "#3f789e",
-      "font_size": 24,
+      "color": "#365f4b",
+      "font_size": 22,
+      "flags": {}
+    },
+    {
+      "id": 11,
+      "title": "DEMO · PROMPT GUIDE",
+      "bounding": [
+        1400,
+        2370,
+        570,
+        880
+      ],
+      "color": "#365f4b",
+      "font_size": 22,
       "flags": {}
     }
   ],
@@ -2840,10 +2634,10 @@
     "VHS_MetadataImage": true,
     "VHS_KeepIntermediate": true,
     "ds": {
-      "scale": 0.5603112840466928,
+      "scale": 0.5,
       "offset": [
-        2335.3467480944532,
-        -4102.867472659601
+        160,
+        290
       ]
     }
   },

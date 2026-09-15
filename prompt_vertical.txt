@@ -3,7 +3,7 @@ Vertical smartphone-style portrait video, 28mm front camera look, soft late-afte
 Scene overview: A woman in her late twenties stands in a bright home kitchen talking straight to camera, casual and warm, like a phone recording.
 
 Storyboard:
-[0s-5s] Shot 1: Vertical medium close-up, head and shoulders filling the upper two thirds of the frame, kitchen counter and a window softly out of focus behind her. She looks into the lens and speaks, one small nod, natural blink.
+[0s-5s] One continuous take: Vertical medium close-up, head and shoulders filling the upper two thirds of the frame, kitchen counter and a window softly out of focus behind her. She looks into the lens and speaks, one small nod, natural blink.
 
 Camera: Static Shot held at chest height, very slight handheld drift.
 

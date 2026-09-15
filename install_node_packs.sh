@@ -1,17 +1,22 @@
 #!/bin/zsh
 # Custom node packs for the MiniMax H3 Apple Silicon workflow (MacMax_MiniMaxH3_AppleSilicon.json).
 #
-#   Required (3): ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8, ComfyUI-Spectrum-MiniMax-H3.
+#   Base: ComfyUI-GGUF, ComfyUI-AppleSilicon-FP8.
+#   Turbo: ComfyUI-PlagueKind-Nodes + comfyui-obvpm.
 #   Optional (2): ComfyUI-H3-Motion-Context (chaining), ComfyUI-ClipProj (smaller text encoder).
 #
 # ResolutionSelector is ComfyUI CORE (comfy_extras/nodes_resolution.py). No extra pack for it.
 #
-# Pass a target: ./install_node_packs.sh macmax | extras | all   (default: all)
+# Pass a target: ./install_node_packs.sh macmax | turbo | extras | all   (default: turbo)
 #
 # DO NOT RUN THIS WHILE A RENDER IS IN FLIGHT. It writes into the venv and the custom_nodes
 # dir, and a half-installed pack breaks ComfyUI on next start.
 set -e
-TARGET="${1:-all}"
+TARGET="${1:-turbo}"
+case "$TARGET" in
+  macmax|turbo|extras|all) ;;
+  *) echo "Usage: $0 macmax|turbo|extras|all" >&2; exit 2 ;;
+esac
 COMFY="${COMFY_ROOT:-$HOME/ComfyUI-h3}"
 CN=$COMFY/custom_nodes
 PY=$COMFY/venv/bin/python
@@ -31,16 +36,7 @@ clone https://github.com/city96/ComfyUI-GGUF.git
 clone https://github.com/pawel-mazurkiewicz/ComfyUI-AppleSilicon-FP8.git
 PACKS+=(ComfyUI-GGUF ComfyUI-AppleSilicon-FP8)
 # ComfyUI-GGUF reports IMPORT FAILED without this exact version
-$PY -m pip install -q "gguf==0.18.0" || echo "  WARN: gguf==0.18.0 failed to install"
-
-# Spectrum: the workflow ships it ENABLED. It forecasts skipped sampling steps from a fitted
-# curve instead of reusing a cached state, so fast-changing detail like a mouth survives.
-# PINNED to v0.2.3: earlier versions share one blend weight across audio+video, and because H3
-# packs audio and video into one transformer sequence a video forecast error reaches audio and
-# comes back as distorted sound. v0.2.1+ splits the controls and adds a replay pass.
-clone https://github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3.git
-( cd $CN/ComfyUI-Spectrum-MiniMax-H3 && git fetch -q --depth 1 origin tag v0.2.3 2>/dev/null && git -c advice.detachedHead=false checkout -q v0.2.3 || echo "  WARN: could not pin Spectrum v0.2.3, using cloned HEAD" )
-PACKS+=(ComfyUI-Spectrum-MiniMax-H3)
+$PY -m pip install -q "gguf==0.18.0"
 
 if [[ $TARGET == extras || $TARGET == all ]]; then
   # --- OPTIONAL: chaining + the smaller text encoder -----------------------------------
@@ -52,6 +48,15 @@ if [[ $TARGET == extras || $TARGET == all ]]; then
   PACKS+=(ComfyUI-H3-Motion-Context ComfyUI-ClipProj)
 fi
 
+# Turbo uses the same node-pack revisions as the local compatibility test.
+if [[ $TARGET == turbo || $TARGET == extras || $TARGET == all ]]; then
+  clone https://github.com/PlagueKind/ComfyUI-PlagueKind-Nodes.git
+  clone https://github.com/obvpm/comfyui-obvpm.git
+  ( cd "$CN/ComfyUI-PlagueKind-Nodes" && git fetch --depth 1 origin aaec055cd642b3292df18e69824c012d345ebfe8 && git checkout --detach aaec055cd642b3292df18e69824c012d345ebfe8 )
+  ( cd "$CN/comfyui-obvpm" && git fetch --depth 1 origin 704fe3edea3e69f113219319c87bdf4c74abc5cd && git checkout --detach 704fe3edea3e69f113219319c87bdf4c74abc5cd )
+  PACKS+=(ComfyUI-PlagueKind-Nodes comfyui-obvpm)
+fi
+
 # Install each pack's requirements, minus the NVIDIA-only lines (they fail on Mac; same for
 # triton, sageattention, flash-attn and xformers, none of which have Apple Silicon builds).
 for d in ${(u)PACKS}; do
@@ -59,7 +64,7 @@ for d in ${(u)PACKS}; do
     grep -viE '^(nvidia|triton|sageattention|flash-attn|xformers)' $CN/$d/requirements.txt \
       > "${TMPDIR:-/tmp}/req_$d.txt" || true
     echo "installing $d requirements (NVIDIA/triton lines stripped)"
-    $PY -m pip install -q -r "${TMPDIR:-/tmp}/req_$d.txt" || echo "  WARN: some requirements failed for $d"
+    $PY -m pip install -q -r "${TMPDIR:-/tmp}/req_$d.txt"
   fi
 done
 
@@ -71,6 +76,6 @@ Done. Restart ComfyUI with:
 Then load MacMax_MiniMaxH3_AppleSilicon.json. Its loaders use bare stock filenames, so re-pick
 them once if your models live in subfolders.
 
-These node types stay unresolved on Apple Silicon and ship BYPASSED on purpose. Do not enable
-them: SolAttnPatch, MiniMaxH3MemoryEfficientSageAttentionPatch, LoadAudioUI.
+Do not use Spectrum or EasyCache with turbo LoRAs. Motion Context and ClipProj require extras; their blocks
+also ship bypassed. See the workflow notes before enabling optional blocks.
 EOF
