@@ -1,6 +1,6 @@
 # MacMax — MiniMax H3 on Apple Silicon
 
-Video and native stereo audio, generated together in ComfyUI on a Mac. **One workflow, with Parasyte Turbo enabled by default.** Start with text, supply an image, or guide both the first and last frames.
+Video and native stereo audio, generated together in ComfyUI on a Mac. **One workflow, with Parasyte Turbo enabled by default.** Start with text, guide the first/last frames, or switch to image, video and audio references.
 
 **[Download the release](https://github.com/Bambushu/minimax-h3-mac/releases/latest)** · [Workflow JSON](MacMax_MiniMaxH3_AppleSilicon.json) · [Watch the default demo](samples/sample_MacMax_t2v.mp4)
 
@@ -8,7 +8,7 @@ Tested on a **48 GB M5 Pro using MPS**, including a fresh ComfyUI installation. 
 
 [![MacMax workflow in ComfyUI: settings, prompt and image inputs, models, and output](docs/workflow.png)](docs/workflow.png)
 
-*The main canvas in local ComfyUI. Optional blocks sit below; image placeholders are bypassed by default.*
+*The original four-column canvas, before the R2V panel was added. The current workflow also has a shared prompt, mode toggle and reference panel. Image placeholders are bypassed by default.*
 
 ## Setup
 
@@ -34,7 +34,7 @@ Use a ComfyUI checkout with its requirements installed in `venv/`. The fresh-ins
 4. Open [ComfyUI](http://127.0.0.1:8288), load `MacMax_MiniMaxH3_AppleSilicon.json`, and select your model filenames in the loaders if you keep them in subfolders.
 5. Click **Run** for the supplied demo, or edit its prompt first. The video with audio appears in the output column.
 
-The canvas reads **settings → prompt/images → models → output**, with optional blocks and instructions below. Purple nodes are bypassed; toggle them with the node menu’s **Bypass** action.
+The canvas reads **settings → prompt/images → models → output**, with R2V references in column 5 and optional blocks and instructions below. Purple nodes are bypassed; toggle them with the node menu’s **Bypass** action.
 
 ## Models
 
@@ -88,11 +88,16 @@ Times include model loading, sampling, decoding and saving, but exclude queue wa
 | Text-to-video | Leave both image nodes bypassed. This is the default. |
 | Image-to-video | Choose an image and enable the first image node. |
 | First/last frame | Choose both images and enable both image nodes. |
+| Reference-to-video | Turn USE R2V on and enable the desired reference inputs in column 5. |
 | Chaining | Enable the Motion Context blocks using the instructions below. |
 | Smaller text encoder | Enable and wire ClipProj using the instructions below. |
 | 1080p / separate audio | Enable the optional export blocks. 1080p is pixel resizing, not generated detail. |
 
-Image nodes contain `example.png` placeholders: replace them before enabling. **R2V is not included in this release.** ComfyUI has a separate `MiniMaxH3ReferenceToVideo` node for image, video and audio references, but this graph does not wire it and that path has not been tested with the shipped model/LoRA combination. The two image inputs guide the first and last frames; they are not R2V reference inputs. The optional 1080p export is portrait-specific; adjust it when changing aspect ratio.
+Image nodes contain `example.png` placeholders: replace them before enabling. **R2V:** turn **USE R2V** on, choose files in column 5, and enable the reference loaders you need. For a video reference, enable both Load Video and Video Components and use a 24 fps source. Reference image sizing defaults to `match`; `max` costs more time and memory.
+
+Use `<Picture 1>`, `<Picture 2>`, `<Video 1>` and `<Audio 1>` in the shared prompt. Numbering follows enabled references; video soundtracks receive audio numbers before standalone audio. Both conditioning and latent switch together. The unused branch is evaluated lazily. First/last-frame guides are ignored in R2V; turn the toggle off to return to those modes. Keep Motion Context continuation off when using R2V until that combination is validated.
+
+ The optional 1080p export is portrait-specific; adjust it when changing aspect ratio.
 
 **Chaining:** enable **Save THIS clip** before rendering clip 1. For the next clip, also enable **Continue FROM clip**, Motion Context and Trim. Set the load/save clip indices, use a distinct chain folder, keep resolution unchanged and bypass image inputs. Continuation trims 22 context frames. Save the sampler latent, not the resized export.
 

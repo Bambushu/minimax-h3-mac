@@ -72,3 +72,28 @@ combined caches and arbitrary model/LoRA substitutions are outside this test mat
 Do not combine Spectrum or EasyCache with turbo LoRAs. Successful execution and
 valid media encoding did not establish acceptable visual quality. Existing default sample video and timing
 claims refer to the tested 48 GB configuration.
+
+## R2V mode addition
+
+The workflow now shares one prompt and switches both CONDITIONING and LATENT
+with a single USE R2V boolean. Both routers use the core lazy If/Else Switch,
+which is present in the previously tested v0.34.0 checkout. T2V stays the default.
+Image, video and audio reference loaders are wired and initially bypassed.
+
+An image-reference R2V render with Parasyte completed in **3m14s** at
+0.1 MP (256×416), a 3-second setting, 8 steps and seed 77001. Its reference
+was a frame from the public demo. Full media decode passed and a representative
+frame was inspected. This is a functional test, not an identity or lip-sync score.
+
+The graph loaded in local ComfyUI without missing-node errors. Link endpoints,
+paired routing, shared prompt, default toggle and portable model paths were
+checked. Motion Context combined with R2V remains outside this test scope.
+
+Switching the same toggle back to T2V completed in **3m06s** at the same small
+canvas and duration. The saved video passed a full decode check.
+
+Combined image + video + soundtrack + standalone audio R2V completed in **3m49s**
+using the same 0.1 MP / 3-second / 8-step settings. The video/audio fixture was
+a one-second, 24 fps extract of the public demo. Output: 73 frames and stereo
+audio; full decode passed. This checks the reference connections, not voice
+identity, precise reference adherence, or the recommended duration of reference clips.
