@@ -1,10 +1,10 @@
-# MacMax — MiniMax H3 on Apple Silicon
+# MacMax — MiniMax H3 on Apple Silicon (24GB+ RAM, M1+)
 
 Video and native stereo audio, generated together in ComfyUI on a Mac. **One workflow, with Parasyte Turbo enabled by default.** Start with text, guide the first/last frames, or switch to image, video and audio references.
 
 **[Download the release](https://github.com/Bambushu/minimax-h3-mac/releases/latest)** · [Workflow JSON](MacMax_MiniMaxH3_AppleSilicon.json) · [Watch the default demo](samples/sample_MacMax_t2v.mp4)
 
-Tested on a **48 GB M5 Pro using MPS**, including a fresh ComfyUI installation. Smaller-memory Macs have not been validated. The five default models need approximately **37 GB of disk space**, plus ComfyUI and its dependencies.
+Tested on a **48 GB M5 Pro using MPS**, including a fresh ComfyUI installation. Smaller Macs: 24 GB+ with the [light setup](#smaller-macs); a 16 GB M1 MacBook Air runs it, but only ~1s clips. The five default models need approximately **37 GB of disk space**, plus ComfyUI and its dependencies.
 
 [![MacMax workflow in ComfyUI: settings, prompt and image inputs, models, and output](docs/workflow.png)](docs/workflow.png)
 
@@ -104,6 +104,15 @@ Use `<Picture 1>`, `<Picture 2>`, `<Video 1>` and `<Audio 1>` in the shared prom
 **ClipProj:** select the smaller encoder and projection, enable its loader, connect CLIP to the prompt node and bypass the GGUF text encoder. Download instructions: [ClipProj](https://github.com/nicolab28/ComfyUI-ClipProj) and [H3 projection matrices](https://huggingface.co/NicoLab28/ClipProj-MiniMax-H3). It approximates the larger encoder; compare prompt adherence and spoken names.
 
 **Base models:** the canvas notes explain switching to GGUF without Parasyte or the optional int8 checkpoint. Use their **20-step Euler/Simple, shift 6/3** recipe. Do not apply Parasyte to the int8 path. The old lightx2v recipe is retired.
+
+## Smaller Macs
+Below 32 GB, use the light setup. The 24 GB+ label comes from the 16 GB test below; a 24 GB Mac has not been run yet.
+- Diffusion model: [Pruned FL2VA Q3_K_M](https://huggingface.co/Abiray/MiniMax-H3-Pruned-GGUF/resolve/main/MiniMax-H3-FL2VA-Pruned-Q3_K_M.gguf) (8.8 GB) instead of Q5_K_M.
+- Text encoder: ClipProj with `qwen3vl_4b_fp8_scaled` and `mmh3-4b-ClipProj-v3.1`, loader device `cpu`, instead of the 32B GGUF.
+- Launch with `--reserve-vram 1` instead of 10.
+- Keep LoRA patches off the GPU (the GGUF loader default). A LoRA held on MPS runs out of memory at 16 GB.
+
+Tested on an M1 MacBook Air 16 GB at 352×608: 22 frames (~1s) with audio in 36 min with Parasyte (8 steps), or 17 min with the [H3 Turbo LoRA](https://github.com/Larryvrh/ComfyUI-MiniMax-H3-Turbo) merged in (4 steps, `low_vram` on). 56 frames and up ran out of GPU memory. macOS gives the GPU about 74% of RAM, so a 24 GB Mac has about 6 GB more room, which should cover 3-5s clips at this size.
 
 ## What was tested
 
